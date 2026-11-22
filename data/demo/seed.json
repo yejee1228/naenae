@@ -1,0 +1,95 @@
+{
+ "note": "데모 계정(소셜 로그인) 첫 로그인 때 채워지는 예시 기록",
+ "records": [
+  {
+   "type": "attended",
+   "refId": "kopis:demo-p01",
+   "title": "새벽두시밴드 단독 공연: 밤의 끝",
+   "date": "D-26",
+   "venue": "롤링홀",
+   "region": "서울",
+   "artists": [
+    "새벽두시밴드"
+   ]
+  },
+  {
+   "type": "attended",
+   "refId": "kopis:demo-p02",
+   "title": "코튼캔디 X 문라이터: 달콤한 밤",
+   "date": "D-19",
+   "venue": "롤링홀",
+   "region": "서울",
+   "artists": [
+    "코튼캔디",
+    "문라이터"
+   ]
+  },
+  {
+   "type": "attended",
+   "refId": "kopis:demo-p03",
+   "title": "새벽두시밴드 클럽 투어 [부산]",
+   "date": "D-12",
+   "venue": "KT&G 상상마당 라이브홀 [부산]",
+   "region": "부산",
+   "artists": [
+    "새벽두시밴드"
+   ]
+  },
+  {
+   "type": "attended",
+   "refId": "kopis:demo-p04",
+   "title": "소금빵클럽 쇼케이스",
+   "date": "D-5",
+   "venue": "롤링홀",
+   "region": "서울",
+   "artists": [
+    "소금빵클럽"
+   ]
+  },
+  {
+   "type": "attended",
+   "refId": "kopis:demo-p05",
+   "title": "노을정류장 X 새벽두시밴드 어쿠스틱 라이브",
+   "date": "D-2",
+   "venue": "살롱 문보우",
+   "region": "서울",
+   "artists": [
+    "노을정류장",
+    "새벽두시밴드"
+   ]
+  },
+  {
+   "type": "planned",
+   "refId": "kopis:demo-p09",
+   "title": "오렌지노트 연말 공연: 귤 까먹는 밤",
+   "date": "D+21",
+   "venue": "롤링홀",
+   "region": "서울",
+   "artists": [
+    "오렌지노트"
+   ]
+  },
+  {
+   "type": "planned",
+   "refId": "kopis:demo-p15",
+   "title": "문라이터 단독 공연 [부산]",
+   "date": "D+20",
+   "venue": "KT&G 상상마당 라이브홀 [부산]",
+   "region": "부산",
+   "artists": [
+    "문라이터"
+   ]
+  }
+ ],
+ "artists": [
+  {
+   "name": "오렌지노트"
+  },
+  {
+   "name": "새벽두시밴드"
+  },
+  {
+   "name": "달빛수영장"
+  }
+ ]
+}

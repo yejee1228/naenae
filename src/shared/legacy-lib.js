@@ -202,9 +202,9 @@
       o.showDate ? '공연 ' + fmtDayKo(o.showDate) + (o.venue ? ' · ' + o.venue : '') : o.venue,
       o.vendor ? '예매처 ' + o.vendor : '',
       o.ticketUrl || '',
-      'my Live. 에서 추가한 일정'
+      '내내 nae nae에서 추가한 일정'
     ].filter(Boolean).join('\n');
-    const base = { uid: `${o.id}@mylive`, title: `[티켓 오픈] ${o.title}`, details, url: o.ticketUrl || '', location: o.vendor || '' };
+    const base = { uid: `${o.id}@naenae`, title: `[티켓 오픈] ${o.title}`, details, url: o.ticketUrl || '', location: o.vendor || '' };
     if (o.openHasTime) return { ...base, allDay: false, start: o.openAt, end: new Date(o.openAt.getTime() + 30 * 60000) };
     const day = kstDay(o.openAt);
     return { ...base, allDay: true, startDay: day, endDay: addDays(day, 1) };
@@ -229,7 +229,7 @@
   }
   function icsText(ev, now = new Date()) {
     const L = [
-      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//my Live//MVP 0.5//KO', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//naenae//beta//KO', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
       'BEGIN:VEVENT', `UID:${ev.uid}`, `DTSTAMP:${icsStamp(now)}`,
       ev.allDay ? `DTSTART;VALUE=DATE:${ev.startDay.replace(/-/g, '')}` : `DTSTART:${icsStamp(ev.start)}`,
       ev.allDay ? `DTEND;VALUE=DATE:${ev.endDay.replace(/-/g, '')}` : `DTEND:${icsStamp(ev.end)}`,
@@ -348,10 +348,46 @@
   /** 연말 결산 공개 여부: 해당 연도 12월 1일 이후 */
   const yearRevealed = (year, todayYmd) => todayYmd >= `${year}-12-01`;
 
+  /* ---------- 추천 (규칙 기반) ----------
+   * 앞으로 days일 안의 공연 중, 아직 담거나 본 적 없는 공연을 점수로 정렬.
+   *   관심 아티스트 출연 +3 · 기록이 있는 공연장 +2 · 가장 많이 기록한 지역 +0.5 · 라이브클럽 +0.3
+   * 점수 1 이상(= 관심 아티스트나 자주 간 공연장 이유가 있는 것)만 추천합니다.
+   */
+  function recommendPerformances(perfs, records, interests, todayYmd, opts = {}) {
+    const { limit = 3, days = 30, clubVenues = [] } = opts;
+    const k = s => String(s || '').normalize('NFKC').toLowerCase().replace(/\s+/g, '');
+    const recs = Array.isArray(records) ? records : [];
+    const taken = new Set(recs.map(r => r.refId).filter(Boolean));
+    const fav = new Map((interests || []).map(a => [k(a.name), a.name]));
+    const venues = new Map(); const regions = new Map();
+    recs.forEach(r => {
+      if (r.venue) venues.set(k(r.venue), (venues.get(k(r.venue)) || 0) + 1);
+      if (r.region) regions.set(r.region, (regions.get(r.region) || 0) + 1);
+    });
+    const topRegion = [...regions.entries()].sort((a, b) => b[1] - a[1])[0];
+    const until = addDays(todayYmd, days);
+    return (perfs || [])
+      .filter(p => p.endDate >= todayYmd && p.date <= until && !taken.has('kopis:' + p.id))
+      .map(p => {
+        const reasons = []; let score = 0;
+        const a = (p.artists || []).find(x => fav.has(k(x)));
+        if (a) { score += 3; reasons.push(`관심 아티스트 ${a} 출연`); }
+        const v = venues.get(k(p.venue));
+        if (v) { score += 2; reasons.push(v > 1 ? `자주 가는 공연장 (${v}회 기록)` : '내가 다녀온 공연장'); }
+        if (topRegion && p.region === topRegion[0]) score += 0.5;
+        if (matchVenue(p.venue, clubVenues)) score += 0.3;
+        return { perf: p, score, reasons };
+      })
+      .filter(x => x.score >= 1)
+      .sort((a, b) => b.score - a.score || a.perf.date.localeCompare(b.perf.date))
+      .slice(0, limit);
+  }
+
   root.MyLiveLib = {
     KST, esc, safeURL, kstDay, dayDiff, parseKST, normDate, fmtTime, fmtDayKo, fmtStampDate, fmtOpen,
     splitArtists, normalizeOpening, openingStatus, sortOpenings, parseCSV, csvToObjects, normalizeShow, HEADER_ALIASES,
     addDays, monthGrid, shiftMonth, weekday, openingEvent, googleCalendarUrl, icsText, icsFold,
-    normalizePerformance, matchVenue, computeBadges, BADGES, BADGE_CONCEPTS, BADGE_THRESHOLD, BADGE_RULES, isLocalRegion, activityDay, yearRevealed
+    normalizePerformance, matchVenue, computeBadges, BADGES, BADGE_CONCEPTS, BADGE_THRESHOLD, BADGE_RULES, isLocalRegion, activityDay, yearRevealed,
+    recommendPerformances
   };
 })(typeof window !== 'undefined' ? window : globalThis);

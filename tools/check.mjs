@@ -1,20 +1,18 @@
-// my Live. MVP 0.5 — 단위 검증 + 배포 전 점검
+// 내내 nae nae beta 1.0 — 단위 검증 + 배포 전 점검
 // 사용: node tools/check.mjs          (단위 검증 + 배포 전 점검, 막히는 항목이 있으면 종료 코드 1)
 //       node tools/check.mjs --unit   (단위 검증만)
 import fs from 'node:fs';
 import vm from 'node:vm';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = f => fs.readFileSync(path.join(root, f), 'utf8');
 const ctx = { console, Intl, Date, URL, URLSearchParams, Math, String, Number, Array, Object, JSON, RegExp, Set, Map, unescape, encodeURIComponent };
 vm.createContext(ctx);
-vm.runInContext(read('lib.js'), ctx, { filename: 'lib.js' });
-vm.runInContext(read('config.js').replace('window.MYLIVE_CONFIG', 'globalThis.MYLIVE_CONFIG'), ctx, { filename: 'config.js' });
+vm.runInContext(read('src/shared/legacy-lib.js'), ctx, { filename: 'legacy-lib.js' });
 const L = ctx.MyLiveLib;
-const CFG = ctx.MYLIVE_CONFIG;
 const at = s => new Date(s);
 const plain = v => JSON.parse(JSON.stringify(v));
 
@@ -102,36 +100,93 @@ assert.equal(L.yearRevealed('2026', '2026-11-30'), false); assert.equal(L.yearRe
 assert.equal(L.computeBadges([], [{ name: 'a' }, { name: 'b' }, { name: 'c' }]).primary.id, 'digger');
 assert.equal(L.computeBadges([{ type: 'planned' }, { type: 'planned' }, { type: 'planned' }], []).primary.id, 'radar');
 assert.equal(L.computeBadges([{ type: 'planned' }, { type: 'planned' }, { type: 'attended' }, { type: 'attended' }], []).primary.id, 'live-goer'); // 동점 → 관람 우선
-console.log('✓ 단위 검증 통과 (날짜·오픈 상태·달력·구글 캘린더·ics·KOPIS 정리·공연장 필터·취향 배지 월간·연말·장거리 원정러)');
+console.log('✓ 0.5 순수 함수 검증 통과 (날짜·오픈 상태·달력·구글 캘린더·ics·KOPIS 정리·공연장 필터·취향 배지)');
+
+
+/* ---------- 1-2. 베타 도메인 함수 (src/shared/domain.js) ---------- */
+const D = await import(pathToFileURL(path.join(root, 'src/shared/domain.js')).href);
+// 공연명에서 아티스트 뽑기 (결정 29) — KOPIS 실제 공연명 기준
+const ex = t => plain(D.extractArtists(t));
+assert.deepEqual(ex('HYUKOH 단독 콘서트'), ['HYUKOH']);
+assert.deepEqual(ex('노브레인 연말 공연 [서울]'), ['노브레인']);
+assert.deepEqual(ex('라라라온'), ['라라라온']);
+assert.deepEqual(ex('A X B'), ['A', 'B']);
+assert.deepEqual(ex(''), []);
+assert.deepEqual(ex('크리스마스 콘서트'), []);              // 일반 단어는 아티스트가 아님
+// 관심 아티스트 매칭: 공연명 + 아티스트 + KOPIS 출연진
+assert.ok(D.matchesArtist('혁 오', { title: 'x', artists: ['혁오'] }));
+assert.ok(D.matchesArtist('hyukoh', { title: 'HYUKOH 단독 콘서트' }));
+assert.ok(D.matchesArtist('김수유', { title: 'x', castRaw: '이한결, 김수유' }));
+assert.ok(!D.matchesArtist('a', { title: 'a' }));                      // 1글자는 매칭 안 함
+assert.equal(D.nameKey(' Ａ B '), 'ab');
+assert.equal(D.shortRegion('서울특별시'), '서울'); assert.equal(D.shortRegion('전남광주통합특별시'), '전남광주');
+// 날짜
+assert.equal(D.addDays('2026-12-31', 1), '2027-01-01'); assert.equal(D.dayDiff('2026-11-23', '2026-12-01'), 8);
+assert.equal(D.kstToday(new Date('2026-11-23T15:30:00Z')), '2026-11-24');
+// 이벤트 상태
+assert.equal(D.eventStatus({ startDate: '2026-12-01', endDate: '2026-12-10' }, '2026-11-23').key, 'soon');
+assert.equal(D.eventStatus({ startDate: '2026-11-01', endDate: '2026-11-23' }, '2026-11-23').label, '오늘 마감');
+assert.equal(D.eventStatus({ startDate: '2026-11-01', endDate: '2026-11-20' }, '2026-11-23').past, true);
+// 추천 3구역: 겹치지 않고, 이미 담은 공연 제외, 30일·5개
+const pf = (id, title, start, venue, artists = []) => ({ id, title, startDate: start, endDate: start, venue, artists });
+const pool = [pf('p1', 'A 단독', '2026-11-25', '롤링홀', ['A']), pf('p2', 'B 공연', '2026-11-26', '롤링홀'), pf('p3', 'C 공연', '2026-11-27', '우무지'),
+  pf('p4', 'A 투어', '2027-02-01', '롤링홀', ['A']), pf('p5', 'D 공연', '2026-11-24', '롤링홀', ['D'])];
+const rs = D.recommendSections(pool, [{ type: 'attended', venue: '롤링홀', performanceId: 'p5' }], [{ name: 'AA' }, { name: 'A 단독' }], ['우무지'], '2026-11-23');
+assert.deepEqual(plain(rs.fav.map(x => x.perf.id)), ['p1']);
+assert.deepEqual(plain(rs.venue.map(x => x.perf.id)), ['p2']);
+assert.deepEqual(plain(rs.club.map(x => x.perf.id)), ['p3']);
+// 육각형
+const hx = D.hexagon([{ type: 'attended', venue: '롤링홀', region: '부산', artists: ['A'] }, { type: 'attended', venue: '롤링홀', region: '서울', artists: ['B'] }, { type: 'planned' }], [{ name: 'A' }]);
+assert.equal(hx.values.travel, 50); assert.equal(hx.values.regular, 25); assert.equal(hx.empty, false);
+assert.equal(D.hexagon([], []).empty, true); assert.equal(D.hexSummary(D.hexagon([], []), 'x'), '');
+// 제보 검사
+assert.equal(D.validateReport({}), '공연명을 입력해 주세요.');
+assert.equal(D.validateReport({ title: 'x' }), '공연 날짜, 오픈 일시, 링크 중 하나는 알려 주세요.');
+assert.equal(D.validateReport({ title: 'x', ticketUrl: 'javascript:alert(1)' }), '링크는 https:// 로 시작하는 주소로 넣어 주세요.');
+assert.equal(D.validateReport({ title: 'x', showDate: '2026-12-01' }), '');
+// KOPIS 응답 정리
+const listXml = '<dbs><db><mt20id>PF1</mt20id><prfnm><![CDATA[A &amp; B 공연]]></prfnm><prfpdfrom>2026.12.01</prfpdfrom><prfpdto>2026.12.02</prfpdto><fcltynm>롤링홀</fcltynm><area>서울특별시</area><prfstate>공연예정</prfstate><poster>http://x/p.gif</poster></db><db><mt20id></mt20id></db></dbs>';
+const li = D.parseKopisList(listXml);
+assert.equal(li.length, 1); assert.equal(li[0].title, 'A & B 공연'); assert.equal(li[0].startDate, '2026-12-01'); assert.equal(li[0].region, '서울');
+const det = D.parseKopisDetail('<dbs><db><mt20id>PF1</mt20id><prfcast>이한결, 김수유 등</prfcast><relates><relate><relatenm>NOL</relatenm><relateurl>https://t.example</relateurl></relate><relate><relatenm>X</relatenm><relateurl>javascript:x</relateurl></relate></relates></db></dbs>');
+assert.equal(det.castRaw, '이한결, 김수유'); assert.equal(det.ticketLinks.length, 1);
+assert.equal(D.kopisError('<dbs><returncode>06</returncode><errmsg>rows</errmsg></dbs>'), '06 rows'); assert.equal(D.kopisError('<dbs><db></db></dbs>'), '');
+console.log('✓ 베타 도메인 함수 검증 통과 (아티스트 추출·매칭·지역·이벤트 상태·추천 3구역·육각형·제보 검사·KOPIS 응답)');
 if (process.argv.includes('--unit')) process.exit(0);
 
 /* ---------- 2. 배포 전 점검 ---------- */
 const errors = []; const warns = [];
-const today = L.kstDay(new Date());
-if (!CFG.appsScriptUrl) errors.push('config.js: appsScriptUrl이 비어 있습니다. 행동 기록이 저장되지 않고, 공연 일정이 엑셀 스냅샷으로 고정됩니다.');
-else if (!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(CFG.appsScriptUrl)) warns.push('config.js: appsScriptUrl이 Apps Script 웹 앱 주소(…/exec) 형식이 아닙니다.');
-if (CFG.debug) errors.push('config.js: debug가 true입니다.');
-if (/KOPIS_KEY|service=/.test(read('config.js') + read('app.js'))) errors.push('사이트 코드에 KOPIS 키로 보이는 문자열이 있습니다. 키는 Apps Script에만 두세요.');
-
-const perfDoc = JSON.parse(read('data/performances.json'));
-const perfs = (perfDoc.performances || []).map(L.normalizePerformance).filter(Boolean);
-const upcoming = perfs.filter(x => x.endDate >= today);
-if (!CFG.appsScriptUrl && upcoming.length === 0) errors.push(`공연 일정: 스냅샷(${perfDoc.updatedAt} 기준)에 앞으로의 공연이 없습니다. KOPIS 자동 수집을 연결하세요.`);
-
-if (CFG.openingsCsvUrl) warns.push('오픈 공지를 구글 시트에서 불러옵니다. 시트 내용은 화면에서 직접 확인하세요.');
-const norm = JSON.parse(read('data/openings.json')).map(L.normalizeOpening).filter(Boolean);
-norm.forEach(x => {
-  const tag = `openings.json "${x.title}"`;
-  if (x.sample) (CFG.openingsCsvUrl ? warns : errors).push(`${tag}: 예시 항목이 남아 있습니다.`);
-  if (!x.ticketUrl) warns.push(`${tag}: 예매 링크 없음.`);
-  if (!x.openAt) warns.push(`${tag}: 오픈 일시 없음 → 캘린더 추가 버튼이 나오지 않습니다.`);
-  if (x.kopisId && !perfs.some(q => q.id === x.kopisId)) warns.push(`${tag}: KOPIS ID ${x.kopisId}가 현재 공연 일정에 없습니다 (자동 수집 후 다시 확인).`);
-});
-if (!CFG.openingsCsvUrl && !L.sortOpenings(norm).some(x => !x.sample)) errors.push('화면에 보일 실제 오픈 공지가 0건입니다.');
+const exists = f => fs.existsSync(path.join(root, f));
+const walk = dir => fs.readdirSync(path.join(root, dir), { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)]);
+// Edge Function 공용 사본이 원본과 같은지
+if (read('supabase/functions/_shared/domain.js') !== read('src/shared/domain.js')) errors.push('supabase/functions/_shared/domain.js 가 src/shared/domain.js 와 다릅니다. 복사해서 맞춰 주세요.');
+// 키 유출: 사이트 코드·배포 결과물에 KOPIS 키나 서비스 키 흔적이 없어야 함
+const envKey = exists('.env.local') ? ((read('.env.local').match(/^KOPIS_KEY=(.+)$/m) || [])[1] || '').trim() : '';
+const scan = [...walk('src'), 'index.html', 'admin.html', ...(exists('dist') ? walk('dist') : [])].filter(f => /\.(js|html|css|json)$/.test(f));
+for (const f of scan) {
+  const t = read(f);
+  if (envKey && t.includes(envKey)) errors.push(`${f}: KOPIS 키가 들어 있습니다.`);
+  if (/service_role|sb_secret_/i.test(t)) errors.push(`${f}: Supabase 서비스 키로 보이는 문자열이 있습니다.`);
+  if (f.startsWith('dist') && /PF\d{6}/.test(t)) errors.push(`${f}: KOPIS 스냅샷(PF…)이 배포 결과물에 섞였습니다 (결정 4 확인 전 공개 금지).`);
+}
+if (!exists('dist')) warns.push('dist 가 없어 배포 결과물 검사는 건너뛰었습니다. npm run build 후 다시 돌려 주세요.');
+// 예시 데이터
+const ymdRel = /^D[+-]\d+( \d{2}:\d{2})?$/;
+for (const [file, list] of [['openings', JSON.parse(read('data/demo/openings.json'))], ['performances', JSON.parse(read('data/demo/performances.json')).performances]]) {
+  list.forEach(x => {
+    if (!x.id || !x.title) errors.push(`data/demo/${file}.json: id·title 없는 항목`);
+    for (const k of ['showDate', 'openAt', 'date', 'endDate']) if (x[k] && !ymdRel.test(x[k])) warns.push(`data/demo/${file}.json "${x.title}": ${k}가 D+n 형식이 아닙니다.`);
+  });
+}
+const migs = fs.readdirSync(path.join(root, 'supabase/migrations')).sort();
+if (!migs.length) errors.push('supabase/migrations 가 비어 있습니다.');
+if (!exists('.env.example')) warns.push('.env.example 이 없습니다.');
+const gi = read('.gitignore');
+if (!gi.includes('.env.*') || !gi.includes('data/kopis-snapshot.json')) errors.push('.gitignore 에 .env.* 또는 KOPIS 스냅샷 제외가 빠졌습니다.');
 
 console.log('\n배포 전 점검 결과');
-console.log(`  공연 일정 ${perfs.length}건(앞으로 ${upcoming.length}건, ${perfDoc.source}) · 오픈 공지 ${norm.length}건 · Apps Script ${CFG.appsScriptUrl ? '설정됨' : '미설정'}`);
+console.log(`  검사 파일 ${scan.length}개 · 마이그레이션 ${migs.length}개 · KOPIS 키 ${envKey ? '로컬에 있음(코드 유출 검사함)' : '로컬에 없음'}`);
 warns.forEach(w => console.log('  ! 확인: ' + w));
 errors.forEach(e => console.log('  ✗ 막힘: ' + e));
 if (errors.length) { console.log(`\n✗ 배포 전 해결할 항목 ${errors.length}건`); process.exit(1); }
-console.log('\n✓ 배포 가능 (확인 항목은 화면에서 한 번 더 봐 주세요)');
+console.log('\n✓ 배포 가능');
