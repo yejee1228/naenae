@@ -1,0 +1,7 @@
+# 공개 저장소(GitHub Pages)에 올리지 않을 내부 문서
+*.pdf
+docs/
+
+# 키·비밀값 (KOPIS_KEY 등) — 절대 올리지 않음
+.env
+.env.*

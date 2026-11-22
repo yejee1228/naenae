@@ -1,0 +1,1248 @@
+{
+"source": "KOPIS 엑셀 스냅샷 (0.3 첨부 92건)",
+"updatedAt": "2026-10-11",
+"performances": [
+{
+"id": "kopis-excel-1",
+"title": "Over The Shoulder 특별편, 소년만화: 다양성 X 청요일 X 이디어츠",
+"date": "2026-10-18",
+"endDate": "2026-10-18",
+"venue": "우무지",
+"region": "서울",
+"seats": "100",
+"artists": [
+"다양성",
+"청요일",
+"이디어츠"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-2",
+"title": "Over The Shoulder 할로윈: 지하유령",
+"date": "2026-11-01",
+"endDate": "2026-11-01",
+"venue": "우무지",
+"region": "서울",
+"seats": "100",
+"artists": [
+"지하유령"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-3",
+"title": "청춘비상 우승팀 X 기성 뮤지션 콜라보 공연: INTRO",
+"date": "2026-10-23",
+"endDate": "2026-10-23",
+"venue": "KT&G 상상마당 라이브홀 [마포]",
+"region": "서울",
+"seats": "150",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-4",
+"title": "Maybe Tomorrow",
+"date": "2026-10-21",
+"endDate": "2026-10-23",
+"venue": "구름아래소극장",
+"region": "서울",
+"seats": "200",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-5",
+"title": "렘피스트 단독공연: Fires and Guts",
+"date": "2026-10-31",
+"endDate": "2026-10-31",
+"venue": "후케즈",
+"region": "서울",
+"seats": "30",
+"artists": [
+"렘피스트"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-6",
+"title": "홍경민 매달리스트 콘서트 SEASON3 (11월)",
+"date": "2026-11-07",
+"endDate": "2026-11-07",
+"venue": "구름아래소극장",
+"region": "서울",
+"seats": "200",
+"artists": [
+"홍경민"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-7",
+"title": "Night sky 가을 콘서트: 다시 찾아온 가을, 다시 듣는 우리의 노래",
+"date": "2026-10-18",
+"endDate": "2026-10-18",
+"venue": "파랑새극장(구. 샘터파랑새극장)",
+"region": "서울",
+"seats": "173",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-8",
+"title": "라라라온 [살롱문보우]",
+"date": "2026-10-20",
+"endDate": "2026-10-20",
+"venue": "살롱 문보우",
+"region": "서울",
+"seats": "80",
+"artists": [
+"라라라온"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-9",
+"title": "잭킹콩 가을 재즈 공연, Golden Days [천년동안도]",
+"date": "2026-10-31",
+"endDate": "2026-10-31",
+"venue": "천년동안도",
+"region": "서울",
+"seats": "50",
+"artists": [
+"잭킹콩"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-10",
+"title": "라라라온 [전남광주 보헤미안]",
+"date": "2026-10-25",
+"endDate": "2026-10-25",
+"venue": "보헤미안 소극장",
+"region": "전남광주",
+"seats": "100",
+"artists": [
+"라라라온"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-11",
+"title": "오이스터즈 공연: 오이공화국 제1대 선거",
+"date": "2026-10-18",
+"endDate": "2026-10-18",
+"venue": "KT&G 상상마당 라이브홀 [마포]",
+"region": "서울",
+"seats": "150",
+"artists": [
+"오이스터즈"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-12",
+"title": "위일청 & 양현경 콘서트: 노래가 머문 자리 [부산]",
+"date": "2026-11-06",
+"endDate": "2026-11-06",
+"venue": "동래문화회관",
+"region": "부산",
+"seats": "196",
+"artists": [
+"위일청",
+"양현경"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-13",
+"title": "최정윤 단독공연: Enjoy life, Anyway",
+"date": "2026-11-08",
+"endDate": "2026-11-08",
+"venue": "무신사 개러지 (구. 왓챠홀)",
+"region": "서울",
+"seats": "144",
+"artists": [
+"최정윤"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-14",
+"title": "지하 공터: TRICK OR WUMUJI 2",
+"date": "2026-10-31",
+"endDate": "2026-10-31",
+"venue": "우무지",
+"region": "서울",
+"seats": "100",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-15",
+"title": "라라라온 [서울 후케즈]",
+"date": "2026-10-22",
+"endDate": "2026-10-22",
+"venue": "후케즈",
+"region": "서울",
+"seats": "30",
+"artists": [
+"라라라온"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-16",
+"title": "몽향기행 with 미니유",
+"date": "2026-10-25",
+"endDate": "2026-10-25",
+"venue": "복합문화공간 몽향",
+"region": "서울",
+"seats": "100",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-17",
+"title": "SEONGJUN’s REQUEST LIVE [서울]",
+"date": "2026-10-31",
+"endDate": "2026-10-31",
+"venue": "G스페이스홀 (지스페이스홀)",
+"region": "서울",
+"seats": "73",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-18",
+"title": "아카이브 SSMD, Prelude: 스킵잭 & 포져군단",
+"date": "2026-10-21",
+"endDate": "2026-10-21",
+"venue": "KT&G 상상마당 라이브홀 [마포]",
+"region": "서울",
+"seats": "150",
+"artists": [
+"스킵잭",
+"포져군단"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-19",
+"title": "수상한스테이지 (10.23)",
+"date": "2026-10-23",
+"endDate": "2026-10-23",
+"venue": "수상한창고",
+"region": "서울",
+"seats": "35",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-20",
+"title": "POST PANIC NEW SINGLE FANTASTIC LOVE RELEASE PARTY",
+"date": "2026-10-24",
+"endDate": "2026-10-24",
+"venue": "클럽 FF",
+"region": "서울",
+"seats": "130",
+"artists": [
+"POST PANIC"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-21",
+"title": "문래재즈IN, 연중기획: 하이진 밴드",
+"date": "2026-10-17",
+"endDate": "2026-10-17",
+"venue": "문래재즈IN",
+"region": "서울",
+"seats": "60",
+"artists": [
+"하이진 밴드"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-22",
+"title": "먼데이프로젝트 시즌9, 오로라 앨범 발매 콘서트: On My Way",
+"date": "2026-10-22",
+"endDate": "2026-10-22",
+"venue": "Vel.R 벨르 (구. 벨로주 [홍대])",
+"region": "서울",
+"seats": "123",
+"artists": [
+"오로라"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-23",
+"title": "천진우와 구토유발자들이 온다: 서울에서 부산까지 [부산]",
+"date": "2026-10-31",
+"endDate": "2026-10-31",
+"venue": "KT&G 상상마당 라이브홀 [부산]",
+"region": "부산",
+"seats": "217",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-24",
+"title": "먼데이프로젝트 시즌9, 아사달 단독 콘서트: 나만을 기다린다 말해줘",
+"date": "2026-10-20",
+"endDate": "2026-10-20",
+"venue": "우무지",
+"region": "서울",
+"seats": "100",
+"artists": [
+"아사달"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-25",
+"title": "천진우와 구토유발자들이 온다: 서울에서 부산까지 [서울]",
+"date": "2026-10-24",
+"endDate": "2026-10-24",
+"venue": "KT&G 상상마당 라이브홀 [마포]",
+"region": "서울",
+"seats": "150",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-26",
+"title": "먼데이프로젝트 IN 라이브클럽, 샐리에브리웨어 (sally everywhere) 단독 콘서트",
+"date": "2026-10-21",
+"endDate": "2026-10-21",
+"venue": "공상온도",
+"region": "서울",
+"seats": "80",
+"artists": [
+"샐리에브리웨어"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-27",
+"title": "소담 두 번째 단독 콘서트: 나를 만나는 시간",
+"date": "2026-11-07",
+"endDate": "2026-11-07",
+"venue": "카페 언플러그드",
+"region": "서울",
+"seats": "60",
+"artists": [
+"소담"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-28",
+"title": "TUNE UP STAGE, 블루 파프리카 단독 공연: ARCHIVE",
+"date": "2026-10-24",
+"endDate": "2026-10-24",
+"venue": "CJ아지트 광흥창",
+"region": "서울",
+"seats": "250",
+"artists": [
+"블루 파프리카"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-29",
+"title": "잭킹콩 가을 재즈 공연, Golden Days [클럽에반스]",
+"date": "2026-10-25",
+"endDate": "2026-10-25",
+"venue": "클럽 에반스",
+"region": "서울",
+"seats": "20",
+"artists": [
+"잭킹콩"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-30",
+"title": "잭킹콩 가을 재즈 공연, Golden Days [어썸그라운드]",
+"date": "2026-10-24",
+"endDate": "2026-10-24",
+"venue": "어썸그라운드 재즈바",
+"region": "서울",
+"seats": "50",
+"artists": [
+"잭킹콩"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-31",
+"title": "TONE STUDIO LIVE, 담담구구",
+"date": "2026-10-25",
+"endDate": "2026-10-25",
+"venue": "톤스튜디오 서울",
+"region": "서울",
+"seats": "39",
+"artists": [
+"담담구구"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-32",
+"title": "윤아트홀 Ⅹ 바유레일 콜라보 보컬콘서트: 가을의 목소리 [수원]",
+"date": "2026-10-18",
+"endDate": "2026-10-18",
+"venue": "윤아트홀",
+"region": "경기",
+"seats": "40",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-33",
+"title": "춘천연극제, 고맙데이: 튠 어라운드 Tune Around",
+"date": "2026-10-17",
+"endDate": "2026-10-17",
+"venue": "봄내극장",
+"region": "강원",
+"seats": "95",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-34",
+"title": "재즈 콘서트: 윤어진 재즈 프로젝트 X 김서안 X 신인권 [서천]",
+"date": "2026-10-27",
+"endDate": "2026-10-27",
+"venue": "기벌포복합문화센터",
+"region": "충남",
+"seats": "291",
+"artists": [
+"윤어진 재즈 프로젝트",
+"김서안",
+"신인권"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-35",
+"title": "방구석 시리즈 07. 비브라토 방구석 라이브 콘서트: 따운의 작은 우주 속 깊은 일대기",
+"date": "2026-10-16",
+"endDate": "2026-10-16",
+"venue": "비브라토 플러스",
+"region": "서울",
+"seats": "20",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-36",
+"title": "Blue hour: 푸른 밤을 지나 [춘천]",
+"date": "2026-10-31",
+"endDate": "2026-10-31",
+"venue": "KT&G 상상마당 [춘천]",
+"region": "강원",
+"seats": "200",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-37",
+"title": "화노 x FLEET: THERMAL SHOCK",
+"date": "2026-10-23",
+"endDate": "2026-10-23",
+"venue": "Vel.R 벨르 (구. 벨로주 [홍대])",
+"region": "서울",
+"seats": "123",
+"artists": [
+"화노",
+"FLEET"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-38",
+"title": "김마리 단독 콘서트: 파랑구조대: 새파란 신드롬",
+"date": "2026-10-24",
+"endDate": "2026-10-25",
+"venue": "이화여자대학교 영산극장",
+"region": "서울",
+"seats": "288",
+"artists": [
+"김마리"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-39",
+"title": "감귤서리단 X WEDNESDAY OFF: Sunset Orange",
+"date": "2026-10-30",
+"endDate": "2026-10-30",
+"venue": "롤링홀",
+"region": "서울",
+"seats": "200",
+"artists": [
+"감귤서리단",
+"WEDNESDAY OFF"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-40",
+"title": "먼데이프로젝트 시즌9, 매기스가든 단독 콘서트: pouring love and letters",
+"date": "2026-10-15",
+"endDate": "2026-10-15",
+"venue": "살롱 문보우",
+"region": "서울",
+"seats": "80",
+"artists": [
+"매기스가든"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-41",
+"title": "라라라온 [대전 그린빈]",
+"date": "2026-10-17",
+"endDate": "2026-10-17",
+"venue": "그린빈 버찌라이브하우스",
+"region": "대전",
+"seats": "150",
+"artists": [
+"라라라온"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-42",
+"title": "라라라온 [서울 언플러그드]",
+"date": "2026-10-14",
+"endDate": "2026-10-14",
+"venue": "카페 언플러그드",
+"region": "서울",
+"seats": "60",
+"artists": [
+"라라라온"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-43",
+"title": "노아코스트 x 취향상점: Goodbye Summer",
+"date": "2026-10-18",
+"endDate": "2026-10-18",
+"venue": "Vel.R 벨르 (구. 벨로주 [홍대])",
+"region": "서울",
+"seats": "123",
+"artists": [
+"노아코스트",
+"취향상점"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-44",
+"title": "명가의 초대, 산울림 김창훈 & 까망밴드 Concert",
+"date": "2026-10-24",
+"endDate": "2026-10-24",
+"venue": "엠팟홀 (구. 삼익아트홀)",
+"region": "서울",
+"seats": "150",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-45",
+"title": "먼데이프로젝트 IN 라이브클럽, 이디어츠 단독콘서트",
+"date": "2026-10-12",
+"endDate": "2026-10-12",
+"venue": "공상온도",
+"region": "서울",
+"seats": "80",
+"artists": [
+"이디어츠"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-46",
+"title": "라라라온 [대전 인터플레이]",
+"date": "2026-10-16",
+"endDate": "2026-10-16",
+"venue": "인터플레이 [대전]",
+"region": "대전",
+"seats": "80",
+"artists": [
+"라라라온"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-47",
+"title": "라라라온 [서울 A.O.R]",
+"date": "2026-10-15",
+"endDate": "2026-10-15",
+"venue": "클럽 A.O.R(All Of Rock)",
+"region": "서울",
+"seats": "70",
+"artists": [
+"라라라온"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-48",
+"title": "변하은 앨범 발매 기념 단독 공연: 초원의 집",
+"date": "2026-10-17",
+"endDate": "2026-10-17",
+"venue": "살롱 문보우",
+"region": "서울",
+"seats": "80",
+"artists": [
+"변하은"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-49",
+"title": "Whiteusedsocks 단독공연: Live Your Life",
+"date": "2026-10-16",
+"endDate": "2026-10-16",
+"venue": "KT&G 상상마당 라이브홀 [마포]",
+"region": "서울",
+"seats": "150",
+"artists": [
+"Whiteusedsocks"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-50",
+"title": "별 콘서트: STAY",
+"date": "2026-11-08",
+"endDate": "2026-11-08",
+"venue": "구름아래소극장",
+"region": "서울",
+"seats": "200",
+"artists": [
+"별"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-51",
+"title": "여전히 소란스럽게 Vol.02 노브레인 with 크라잉넛, 초록불꽃소년단",
+"date": "2026-11-06",
+"endDate": "2026-11-06",
+"venue": "무신사 개러지 (구. 왓챠홀)",
+"region": "서울",
+"seats": "144",
+"artists": [
+"노브레인",
+"크라잉넛",
+"초록불꽃소년단"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-52",
+"title": "까치산 클럽 투어: 여기, 까치산입니다. [대전]",
+"date": "2026-11-07",
+"endDate": "2026-11-07",
+"venue": "인터플레이 [대전]",
+"region": "대전",
+"seats": "80",
+"artists": [
+"까치산"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-53",
+"title": "이한얼 솔로 피아노 콘서트: 리멤버 재즈 Vol.6",
+"date": "2026-10-31",
+"endDate": "2026-10-31",
+"venue": "마이너스윙 스튜디오 (구. 글로리어겐 스튜디오)",
+"region": "경기",
+"seats": "40",
+"artists": [
+"이한얼"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-54",
+"title": "Super Rookie Challenge: Vocal Seaeon 1, Round 2",
+"date": "2026-10-23",
+"endDate": "2026-10-23",
+"venue": "프리즘홀 (프리즘플러스)",
+"region": "서울",
+"seats": "120",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-55",
+"title": "먼데이프로젝트 시즌9, 청요일 단독 콘서트: 청화수목금토일",
+"date": "2026-10-12",
+"endDate": "2026-10-12",
+"venue": "살롱 문보우",
+"region": "서울",
+"seats": "80",
+"artists": [
+"청요일"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-56",
+"title": "재즈 in 강서, Swing & Pop",
+"date": "2026-10-18",
+"endDate": "2026-10-18",
+"venue": "강서아트리움",
+"region": "서울",
+"seats": "215",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-57",
+"title": "이십사일 단독 콘서트: 미열",
+"date": "2026-10-25",
+"endDate": "2026-10-25",
+"venue": "구름아래소극장",
+"region": "서울",
+"seats": "200",
+"artists": [
+"이십사일"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-58",
+"title": "도깨비제: 이매망량 (魑魅魍魎)",
+"date": "2026-10-30",
+"endDate": "2026-10-30",
+"venue": "우무지",
+"region": "서울",
+"seats": "100",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-59",
+"title": "공명 프로젝트: 두번째 울림 [공주]",
+"date": "2026-10-17",
+"endDate": "2026-10-17",
+"venue": "바드챔버하우스",
+"region": "충남",
+"seats": "80",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-60",
+"title": "METHOD: 20YEARS ANNIVERSARY",
+"date": "2026-10-25",
+"endDate": "2026-10-25",
+"venue": "롤링홀",
+"region": "서울",
+"seats": "200",
+"artists": [
+"METHOD"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-61",
+"title": "단편선 순간들 신작 연인들 발표 기념 쇼케이스",
+"date": "2026-10-31",
+"endDate": "2026-10-31",
+"venue": "현대카드 언더스테이지",
+"region": "서울",
+"seats": "180",
+"artists": [
+"단편선 순간들"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-62",
+"title": "Born to be [ ]",
+"date": "2026-10-23",
+"endDate": "2026-10-23",
+"venue": "롤링홀",
+"region": "서울",
+"seats": "200",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-63",
+"title": "까치산 클럽 투어: 여기, 까치산입니다. [서울]",
+"date": "2026-10-31",
+"endDate": "2026-11-01",
+"venue": "무신사 개러지 (구. 왓챠홀)",
+"region": "서울",
+"seats": "144",
+"artists": [
+"까치산"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-64",
+"title": "Prologue vol.7",
+"date": "2026-10-18",
+"endDate": "2026-10-18",
+"venue": "후케즈",
+"region": "서울",
+"seats": "30",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-65",
+"title": "조이풀스 3주년 기념콘서트: FAR FROM HOME",
+"date": "2026-10-22",
+"endDate": "2026-10-22",
+"venue": "롤링홀",
+"region": "서울",
+"seats": "200",
+"artists": [
+"조이풀스"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-66",
+"title": "티어드랍, 네 번째 단독공연: TEARDROP IV",
+"date": "2026-10-25",
+"endDate": "2026-10-25",
+"venue": "우무지",
+"region": "서울",
+"seats": "100",
+"artists": [
+"티어드랍"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-67",
+"title": "지하침공!",
+"date": "2026-10-15",
+"endDate": "2026-10-15",
+"venue": "KT&G 상상마당 라이브홀 [마포]",
+"region": "서울",
+"seats": "150",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-68",
+"title": "명가의 초대, 시와 그리고, 안젤라 김 Concert",
+"date": "2026-10-17",
+"endDate": "2026-10-17",
+"venue": "엠팟홀 (구. 삼익아트홀)",
+"region": "서울",
+"seats": "150",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-69",
+"title": "먼데이프로젝트 시즌9, 사공 단독 콘서트: 도피자",
+"date": "2026-10-19",
+"endDate": "2026-10-19",
+"venue": "Vel.R 벨르 (구. 벨로주 [홍대])",
+"region": "서울",
+"seats": "123",
+"artists": [
+"사공"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-70",
+"title": "TONE STUDIO LIVE, Asian Spice House",
+"date": "2026-10-17",
+"endDate": "2026-10-17",
+"venue": "톤스튜디오 서울",
+"region": "서울",
+"seats": "39",
+"artists": [
+"Asian Spice House"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-71",
+"title": "적란운 presents: The Curtain Rises vol.2",
+"date": "2026-10-17",
+"endDate": "2026-10-17",
+"venue": "KT&G 상상마당 라이브홀 [마포]",
+"region": "서울",
+"seats": "150",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-72",
+"title": "D-Hack 콘서트: 디핵과 별빛 연맹 1.5",
+"date": "2026-10-17",
+"endDate": "2026-10-17",
+"venue": "후케즈",
+"region": "서울",
+"seats": "30",
+"artists": [
+"D-Hack"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-73",
+"title": "김결 단독 콘서트: 술래잡기",
+"date": "2026-10-17",
+"endDate": "2026-10-18",
+"venue": "롤링홀",
+"region": "서울",
+"seats": "200",
+"artists": [
+"김결"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-74",
+"title": "FRankly 단독 공연: The Ghost Days [생기 스튜디오]",
+"date": "2026-10-30",
+"endDate": "2026-10-30",
+"venue": "생기 스튜디오",
+"region": "서울",
+"seats": "70",
+"artists": [
+"FRankly"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-75",
+"title": "FRankly 단독 공연: The Ghost Days [Vel.R 벨르]",
+"date": "2026-10-31",
+"endDate": "2026-10-31",
+"venue": "Vel.R 벨르 (구. 벨로주 [홍대])",
+"region": "서울",
+"seats": "123",
+"artists": [
+"FRankly"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-76",
+"title": "FRankly 단독 공연: The Ghost Days [홍대 FF]",
+"date": "2026-10-23",
+"endDate": "2026-10-23",
+"venue": "클럽 FF",
+"region": "서울",
+"seats": "130",
+"artists": [
+"FRankly"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-77",
+"title": "Re.may 2nd Solo Concert: Road to Rockstar Vol.2",
+"date": "2026-10-16",
+"endDate": "2026-10-16",
+"venue": "롤링홀",
+"region": "서울",
+"seats": "200",
+"artists": [
+"Re.may"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-78",
+"title": "낙동아트센터 마티네 콘서트, 재즈앙상블 시리즈 Ⅴ. 김민희 Her with jazz band [부산]",
+"date": "2026-10-21",
+"endDate": "2026-10-21",
+"venue": "낙동아트센터",
+"region": "부산",
+"seats": "292",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-79",
+"title": "스웨덴세탁소 단독 콘서트: 우리 다시 만나",
+"date": "2026-10-25",
+"endDate": "2026-10-25",
+"venue": "Vel.R 벨르 (구. 벨로주 [홍대])",
+"region": "서울",
+"seats": "123",
+"artists": [
+"스웨덴세탁소"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-80",
+"title": "찰리재즈퀄텟, ONLY FOR JAZZ [대구] (10.30)",
+"date": "2026-10-30",
+"endDate": "2026-10-30",
+"venue": "에이치아츠 (H-Art)",
+"region": "대구",
+"seats": "30",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-81",
+"title": "idol wave, 突破: Breakthrough",
+"date": "2026-10-17",
+"endDate": "2026-10-17",
+"venue": "아스트라홀",
+"region": "서울",
+"seats": "150",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-82",
+"title": "꿈의 숲 시즌 콘서트, 심아일랜드: Fall in Autumn",
+"date": "2026-10-24",
+"endDate": "2026-10-24",
+"venue": "꿈의숲아트센터",
+"region": "서울",
+"seats": "283",
+"artists": [
+"심아일랜드"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-83",
+"title": "브로콜리너마저의 전국 인디 교류 투어 [춘천]",
+"date": "2026-10-24",
+"endDate": "2026-10-24",
+"venue": "KT&G 상상마당 [춘천]",
+"region": "강원",
+"seats": "200",
+"artists": [
+"브로콜리너마저"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-84",
+"title": "브로콜리너마저의 전국 인디 교류 투어 [부산]",
+"date": "2026-10-17",
+"endDate": "2026-10-17",
+"venue": "KT&G 상상마당 라이브홀 [부산]",
+"region": "부산",
+"seats": "217",
+"artists": [
+"브로콜리너마저"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-85",
+"title": "최항석과 부기몬스터: Human Scramble",
+"date": "2026-10-24",
+"endDate": "2026-10-24",
+"venue": "무신사 개러지 (구. 왓챠홀)",
+"region": "서울",
+"seats": "144",
+"artists": [
+"최항석과 부기몬스터"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-86",
+"title": "브로콜리너마저의 전국 인디 교류 투어 [세종]",
+"date": "2026-10-18",
+"endDate": "2026-10-18",
+"venue": "세종 음악창작소 누리락",
+"region": "세종",
+"seats": "182",
+"artists": [
+"브로콜리너마저"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-87",
+"title": "JAZZ LOSA: Last Day in October in Sayuwon Jazz Concert [대구]",
+"date": "2026-10-31",
+"endDate": "2026-10-31",
+"venue": "사유원",
+"region": "대구",
+"seats": "250",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-88",
+"title": "제주에서 만나는 세계적인 재즈, 스콧 해밀턴 & 롭 반 바벨 트리오 [제주 서귀포]",
+"date": "2026-10-21",
+"endDate": "2026-10-21",
+"venue": "서귀포예술의전당",
+"region": "제주",
+"seats": "190",
+"artists": [
+"스콧 해밀턴",
+"롭 반 바벨 트리오"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-89",
+"title": "YONU THE RETURN",
+"date": "2026-10-30",
+"endDate": "2026-10-30",
+"venue": "H-스테이지",
+"region": "서울",
+"seats": "100",
+"artists": [
+"YONU"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-90",
+"title": "WALPURGISNACHT",
+"date": "2026-10-25",
+"endDate": "2026-10-25",
+"venue": "웨스트브릿지 라이브홀",
+"region": "서울",
+"seats": "160",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-91",
+"title": "안동문화예술의전당 브런치콘서트, 블랙박스 시리즈: Jazz in Blue 민경인 트리오 [안동] (11월)",
+"date": "2026-11-11",
+"endDate": "2026-11-11",
+"venue": "안동문화예술의전당",
+"region": "경북",
+"seats": "276",
+"artists": [
+"민경인 트리오"
+],
+"artistSource": "title",
+"ticketLinks": []
+},
+{
+"id": "kopis-excel-92",
+"title": "렉처 콘서트 Ⅳ. 미국 음악의 탄생 [공주]",
+"date": "2026-11-10",
+"endDate": "2026-11-10",
+"venue": "공주문예회관",
+"region": "충남",
+"seats": "106",
+"artists": [],
+"artistSource": "title",
+"ticketLinks": []
+}
+]
+}
