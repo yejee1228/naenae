@@ -128,7 +128,12 @@ export function createSupabaseBackend(cfg) {
         const r = toReport(await q(sb.from('reports').select('*').eq('id', id).single())); const word = r.title.slice(0, 12);
         const o = (await q(sb.from('openings').select('*').ilike('title', `%${word}%`).limit(3))).map(x => ({ type: '공지', ...toOpening(x) }));
         const p = (await q(sb.from('performances').select('*').ilike('title', `%${word}%`).limit(3))).map(x => ({ type: '공연', ...toPerf(x) }));
-        return [...o, ...p];
+        let same = [];
+        if (r.showDate && (r.artists || []).length) {   // 같은 아티스트 · 같은 날
+          same = [...(await q(sb.from('openings').select('*').eq('show_date', r.showDate).overlaps('artists', r.artists).limit(3))).map(x => ({ type: '공지', ...toOpening(x) })),
+            ...(await q(sb.from('performances').select('*').eq('start_date', r.showDate).overlaps('artists', r.artists).limit(3))).map(x => ({ type: '공연', ...toPerf(x) }))];
+        }
+        const seen = new Set(); return [...o, ...p, ...same].filter(x => !seen.has(x.type + x.id) && seen.add(x.type + x.id)).slice(0, 6);
       },
       async register(id, as, data) { const r = await rpc('admin_register_report', { p_id: id, p_as: as, p_data: data }); return { report: toReport(r.report), createdId: r.createdId }; },
       async reject(id, reason) { return toReport(await rpc('admin_reject_report', { p_id: id, p_reason: reason })); }
@@ -159,7 +164,7 @@ export function createSupabaseBackend(cfg) {
       async hide(id, hidden = true) { await q(sb.from('club_venues').update({ is_hidden: !!hidden }).eq('id', id)); }
     },
     members: {
-      async list(qs = '') { return (await rpc('admin_members', { p_q: qs })).map(m => ({ id: m.id, nickname: m.nickname, provider: m.provider, createdAt: m.created_at, marketing: m.marketing_opt_in, emailMasked: m.email_masked, planned: m.planned, attended: m.attended, artists: m.artists, reports: m.reports })); },
+      async list(qs = '') { return (await rpc('admin_members', { p_q: qs })).map(m => ({ id: m.id, nickname: m.nickname, provider: m.provider, createdAt: m.created_at, marketing: m.marketing_opt_in, isAdmin: !!m.is_admin, emailMasked: m.email_masked, planned: m.planned, attended: m.attended, artists: m.artists, reports: m.reports })); },
       async revealEmail(id) { return rpc('admin_reveal_email', { p_user: id }); }
     },
     async auditLogs() { return q(sb.from('admin_audit_logs').select('*').order('created_at', { ascending: false }).limit(50)); }

@@ -287,7 +287,7 @@ const admin = {
       promotionsLive: db.promotions.filter(p => p.isPublished && !p.hidden && t >= p.startDate && t <= p.endDate).length,
       promotionsSoon: db.promotions.filter(p => p.isPublished && !p.hidden && p.startDate > t).length,
       lastSync: copy(db.kopisRuns[0]), lastSuccess: copy(db.kopisRuns.find(r => r.status === 'success')),
-      members: Object.keys(db.users).length, membersToday: Object.values(db.users).filter(u => u.createdAt?.slice(0, 10) === t).length,
+      members: Object.keys(db.users).length, membersToday: Object.values(db.users).filter(u => u.createdAt && kstToday(new Date(u.createdAt)) === t).length,
       metrics7d: metrics7d()
     };
   },
@@ -300,7 +300,12 @@ const admin = {
   reports: {
     async list() { requireAdmin(); return copy(db.reports.map(r => ({ ...r, nickname: db.users[r.userId]?.nickname || '(탈퇴 회원)' }))); },
     async open(id) { requireAdmin(); const r = db.reports.find(x => x.id === id); if (!r) fail('not_found', '제보를 찾지 못했어요.'); if (r.status === 'submitted') { transition(r, 'reviewing'); save(); } return copy(r); },
-    async duplicates(id) { requireAdmin(); const r = db.reports.find(x => x.id === id); if (!r) return []; const k = nameKey(r.title); return copy([...db.openings.filter(o => nameKey(o.title).includes(k) || k.includes(nameKey(o.title))).map(o => ({ type: '공지', ...o })), ...db.performances.filter(p => nameKey(p.title).includes(k) || k.includes(nameKey(p.title))).map(p => ({ type: '공연', ...p }))].slice(0, 5)); },
+    async duplicates(id) {
+      requireAdmin(); const r = db.reports.find(x => x.id === id); if (!r) return [];
+      const k = nameKey(r.title); const ak = (r.artists || []).map(nameKey).filter(a => a.length >= 2);
+      const hit = (title, artists, date) => { const t = nameKey(title); return t.includes(k) || k.includes(t) || (!!r.showDate && date === r.showDate && ak.some(a => t.includes(a) || (artists || []).some(x => nameKey(x) === a))); };   // 같은 공연명, 또는 같은 아티스트·같은 날
+      return copy([...db.openings.filter(o => hit(o.title, o.artists, o.showDate)).map(o => ({ type: '공지', ...o })), ...db.performances.filter(p => hit(p.title, p.artists, p.startDate)).map(p => ({ type: '공연', ...p }))].slice(0, 6));
+    },
     async register(id, as, data) {
       requireAdmin(); const r = db.reports.find(x => x.id === id);
       if (!r || !['submitted', 'reviewing'].includes(r.status)) fail('conflict', '이미 처리된 제보예요.');

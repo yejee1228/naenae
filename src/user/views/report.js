@@ -1,7 +1,8 @@
 // RPT-01 공연 제보 · RPT-02 내 제보 · SHT-07 제보 완료 · SHT-09 등록 실패 이유 · SHT-10 내 제보 내용 (R-70~77)
 import api from '../../shared/api/index.js';
 import { L } from '../../shared/lib.js';
-import { REPORT_STATUS, validateReport } from '../../shared/domain.js';
+import { REPORT_STATUS, validateReport, kstToday } from '../../shared/domain.js';
+const kstStamp = iso => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso));
 import { esc, page, $, sheet, track, toast, errMsg } from '../ui.js';
 import { S } from '../state.js';
 
@@ -43,7 +44,7 @@ const card = r => {
       : r.status === 'submitted' ? `${esc(st.line)} <button class="link" type="button" data-act="report-cancel" data-id="${esc(r.id)}">제보 취소</button>` : esc(st.line);
   return `<article class="rp${r.userSeen === false ? ' unseen' : ''}"><button type="button" class="rp-main" data-act="report-detail" data-id="${esc(r.id)}">
     <span class="op-top"><span class="badge ${st.badge}">${esc(st.label)}</span><span class="ev-tag">${r.kind === 'performance' ? '공연 일정' : '티켓 오픈 소식'}</span>${r.userSeen === false ? '<i class="dot" aria-label="새 소식"></i>' : ''}</span>
-    <b>${esc(r.title)}</b><small>${esc(L.fmtDayKo(String(r.createdAt).slice(0, 10)))} 제보</small></button><p class="rp-line">${line}</p></article>`;
+    <b>${esc(r.title)}</b><small>${esc(L.fmtDayKo(kstToday(new Date(r.createdAt))))} 제보</small></button><p class="rp-line">${line}</p></article>`;
 };
 export async function renderMyReports() {
   if (!api.auth.current()) { location.replace('#/my'); return; }
@@ -61,7 +62,7 @@ export function reportAction(act, id) {
     sheet(`<h2>등록하지 못했어요</h2><p class="small muted">${esc(r.title)}</p><p>${esc(r.rejectReason || '')}</p><p class="small muted">다른 정보로 다시 제보할 수 있어요.</p><button class="btn primary block" type="button" data-act="report-retry" data-id="${esc(r.id)}">다시 제보하기</button>`);
   } else if (act === 'report-detail') {
     const st = REPORT_STATUS[r.status];
-    sheet(`<h2>내 제보 내용</h2><p class="small muted">${esc(st.label)} · ${esc(String(r.createdAt).slice(0, 16).replace('T', ' '))} 제보</p><dl class="kv">
+    sheet(`<h2>내 제보 내용</h2><p class="small muted">${esc(st.label)} · ${esc(kstStamp(r.createdAt))} 제보</p><dl class="kv">
       ${[['종류', r.kind === 'performance' ? '공연 일정' : '티켓 오픈 소식'], ['공연명', r.title], ['아티스트', (r.artists || []).join(', ')], ['공연장', r.venue], ['공연 날짜', r.showDate], ['티켓 오픈', r.openAtText], ['예매 링크', r.ticketUrl], ['출처 링크', r.sourceUrl], ['메모', r.note]].filter(([, v]) => v).map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`);
   } else if (act === 'report-retry') { prefill = r; location.hash = '#/report'; }
 }

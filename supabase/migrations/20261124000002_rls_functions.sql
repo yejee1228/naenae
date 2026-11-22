@@ -295,12 +295,12 @@ begin
 end $$;
 
 -- 운영자: 회원 목록 (이메일 가림, R-107)
-create or replace function public.admin_members(p_q text default '') returns table (id uuid, nickname text, provider text, created_at timestamptz, marketing_opt_in boolean, email_masked text, planned int, attended int, artists int, reports int)
+create or replace function public.admin_members(p_q text default '') returns table (id uuid, nickname text, provider text, created_at timestamptz, marketing_opt_in boolean, is_admin boolean, email_masked text, planned int, attended int, artists int, reports int)
 language plpgsql stable security definer set search_path = public, auth as $$
 begin
   if not public.is_admin() then perform public.fail('forbidden', '관리자 권한이 없어요.'); end if;
   return query
-  select p.id, p.nickname, p.provider, p.created_at, p.marketing_opt_in,
+  select p.id, p.nickname, p.provider, p.created_at, p.marketing_opt_in, p.is_admin,
          case when u.email is null then '' else regexp_replace(u.email, '^(.).*(@.*)$', '\1***\2') end,
          (select count(*)::int from public.records r where r.user_id = p.id and r.type = 'planned' and r.deleted_at is null),
          (select count(*)::int from public.records r where r.user_id = p.id and r.type = 'attended' and r.deleted_at is null),
