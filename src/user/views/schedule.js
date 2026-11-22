@@ -62,7 +62,7 @@ export function renderPerf(id) {
     <p class="muted">${esc(L.fmtDayKo(p.startDate))}${p.endDate !== p.startDate ? ' ~ ' + esc(L.fmtDayKo(p.endDate)) : ''}<br>${esc(p.venue)}</p>
     ${p.timeText || p.priceText ? `<p class="op-note">${esc([p.timeText, p.priceText].filter(Boolean).join(' · '))}</p>` : ''}
     ${op ? `<div class="op-list">${openingCard(op, 'perf')}</div>` : ''}
-    ${p.ticketLinks.length ? `<div class="links">${p.ticketLinks.map(l => `<a class="btn small ghost" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" data-track="ticket_link_click" data-item="${esc(p.id)}" data-value="${esc(l.name)}">${esc(l.name)} ↗</a>`).join('')}</div>` : '<p class="op-note">예매처 정보 없음</p>'}
+    ${p.ticketLinks.filter(l => L.safeURL(l.url)).length ? `<div class="links">${p.ticketLinks.filter(l => L.safeURL(l.url)).map(l => `<a class="btn small ghost" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" data-track="ticket_link_click" data-item="${esc(p.id)}" data-value="${esc(l.name)}">${esc(l.name)} ↗</a>`).join('')}</div>` : '<p class="op-note">예매처 정보 없음</p>'}
     <h2 class="sub">출연 아티스트</h2>
     ${artists.length ? `<div class="chips">${artists.map(a => { const on = user && isInterested(a); return `<button type="button" class="chip ${on ? 'on' : ''}" data-act="interest" data-name="${esc(a)}" data-from="perf" aria-pressed="${!!on}">${on ? '♥' : '♡'} ${esc(a)}</button>`; }).join('')}</div>` : '<p class="op-note">아티스트 정보가 없어요.</p>'}
     ${p.castRaw ? `<p class="op-note">KOPIS 출연진: ${esc(p.castRaw)}</p>` : ''}

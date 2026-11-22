@@ -21,7 +21,7 @@ export function openingCard(o, ctx) {
     <div class="op-actions">
       ${st.key === 'soon' && o.openAt ? `<button class="btn small primary" type="button" data-act="cal" data-id="${esc(o.id)}" data-ctx="${ctx}">캘린더에 추가</button>` : ''}
       <button class="btn small ${planned ? 'on' : ''}" type="button" data-act="plan-opening" data-id="${esc(o.id)}" aria-pressed="${planned}">${planned ? '♥' : '♡'} 보고 싶어요</button>
-      ${o.ticketUrl ? `<a class="btn small ghost" href="${esc(o.ticketUrl)}" target="_blank" rel="noopener noreferrer" data-track="opening_click" data-item="${esc(o.id)}" data-value="${ctx}">${st.key === 'open' ? '예매하기' : '예매처'} ↗</a>` : ''}
+      ${L.safeURL(o.ticketUrl) ? `<a class="btn small ghost" href="${esc(L.safeURL(o.ticketUrl))}" target="_blank" rel="noopener noreferrer" data-track="opening_click" data-item="${esc(o.id)}" data-value="${ctx}">${st.key === 'open' ? '예매하기' : '예매처'} ↗</a>` : ''}
     </div></article>`;
 }
 export const reportCta = from => `<a class="report-cta" href="#/report" data-act="report-open" data-v="${from}"><span><b>찾는 공연이 없나요?</b><small>티켓 오픈 소식이나 공연을 제보해 주세요. 확인 후 올려 드려요.</small></span><i aria-hidden="true">›</i></a>`;

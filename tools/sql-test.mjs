@@ -117,6 +117,19 @@ await as('super', `select public.metrics_aggregate((now() at time zone 'Asia/Seo
 ok((await one('super', `select value from public.metrics_daily where metric = 'visitors' and key = ''`))?.value === 1, '지표 합계 (R-114)');
 ok((await err('a', `select public.metrics_aggregate()`)).includes('permission denied'), '회원은 지표 작업 못 돌림');
 
+// 우회 시도 (P5 보안 점검)
+await err('a', `update public.reports set status = 'registered' where id = $1`, [rep2]);
+ok((await one('super', `select status from public.reports where id = $1`, [rep2])).status === 'canceled', '회원이 제보 상태를 직접 못 바꿈');
+ok((await err('b', `insert into public.reports (user_id, kind, title, source_url) values ($1, 'opening', '직접 넣기', 'https://a.b')`, [ID.b])) !== '', '제보 직접 insert 막힘 (1시간 제한 우회 불가)');
+ok((await err('a', `select * from public.admin_members('')`)).includes('forbidden'), '회원은 회원 목록 못 봄');
+ok((await err('a', `select public.admin_reveal_email($1)`, [ID.b])).includes('forbidden'), '회원은 이메일 보기 못 함');
+ok((await err('a', `insert into public.admin_audit_logs (actor_id, action, target_table, target_id) values ($1, 'x', 'y', 'z')`, [ID.a])) !== '', '회원은 작업 기록 못 씀');
+ok((await err('a', `update public.promotions set title = 'x'`)) !== '' || (await one('super', `select count(*)::int n from public.promotions where title = 'x'`)).n === 0, '회원은 이벤트 못 고침');
+ok((await err('anon', `select public.logs_cleanup()`)).includes('permission denied'), '비회원은 정리 작업 못 돌림');
+ok((await err('anon', `select * from public.consents`)).includes('permission denied'), '비회원은 동의 이력 못 봄');
+ok((await as('b', `select * from public.consents`)).rows.every(r => r.user_id === ID.b), '회원은 자기 동의 이력만');
+ok((await err('a', `update public.profiles set report_unseen = false, nickname = 'x' where id = $1`, [ID.b])) !== '' || (await one('super', `select nickname from public.profiles where id = $1`, [ID.b])).nickname !== 'x', '남의 프로필 못 고침');
+
 // 탈퇴
 ok((await err('admin', `select public.withdraw()`)).includes('forbidden'), '운영자 탈퇴 막힘 (R-09b)');
 await as('a', `select public.withdraw()`);
