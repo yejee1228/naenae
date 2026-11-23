@@ -14,3 +14,6 @@ dist/
 # 로컬에서만 쓰는 KOPIS 스냅샷 (이용 조건 확인 전 공개 금지)
 data/kopis-snapshot.json
 !.env.example
+
+# Supabase CLI 임시 파일
+supabase/.temp/

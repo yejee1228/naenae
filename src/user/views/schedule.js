@@ -9,18 +9,25 @@ import { openingCard, reportCta } from './open.js';
 
 const WD = ['일', '월', '화', '수', '목', '금', '토'];
 const matchClub = venue => { const v = nameKey(venue); return S.clubVenues.some(x => nameKey(x) && v.includes(nameKey(x))); };
+// 진행 중 = 이미 시작했고 아직 안 끝난 공연 → 오늘 날짜로 보여 주고 '진행 중' 태그 (11/23 결정)
+export const isOngoing = (p, t = today()) => p.startDate < t && p.endDate >= t;
+const md = (d, t) => (d.slice(0, 4) === t.slice(0, 4) ? d.slice(5) : d.slice(2)).replaceAll('-', '.');   // 올해가 아니면 연도도
 export function perfRow(p, reason) {
-  const op = openingByPerf(p.id);
-  const range = p.endDate !== p.startDate ? ` ~ ${p.endDate.slice(5).replace('-', '.')}` : '';
+  const op = openingByPerf(p.id); const t = today(); const on = isOngoing(p, t); const day = on ? t : p.startDate;
+  const range = on ? ` · ${md(p.startDate, t)} ~ ${md(p.endDate, t)}` : p.endDate !== p.startDate ? ` ~ ${md(p.endDate, t)}` : '';
   return `<a class="pf" href="#/perf/${encodeURIComponent(p.id)}"${reason ? ` data-track="reco_click" data-item="${esc(p.id)}"` : ''}>
-    <span class="pf-date">${esc(p.startDate.slice(5).replace('-', '.'))}<small>${WD[L.weekday(p.startDate)]}</small></span>
+    <span class="pf-date">${esc(day.slice(5).replace('-', '.'))}<small>${WD[L.weekday(day)]}</small></span>
     <span class="pf-body"><b>${esc(p.title)}</b><small>${esc([p.venue, p.region].filter(Boolean).join(' · '))}${esc(range)}</small>
-    ${reason ? `<span class="reason">${esc(reason)}</span>` : ''}${op ? `<em class="badge ${op.status.key}">${esc(op.status.label)}</em>` : ''}</span></a>`;
+    ${reason ? `<span class="reason">${esc(reason)}</span>` : ''}${op ? `<em class="badge ${op.status.key}">${esc(op.status.label)}</em>` : ''}</span>${on ? '<em class="badge ongoing">진행 중</em>' : ''}</a>`;
 }
+// 묶음 날짜: 진행 중이면 오늘, 아니면 시작일. 같은 날 안에서는 그날 시작하는 공연 먼저
+const groupDay = (p, t) => (isOngoing(p, t) ? t : p.startDate);
 function filtered() {
   const s = S.sched; const t = today(); const q = nameKey(s.q);
   return S.perfs.filter(p => (s.past || p.endDate >= t) && (!s.region || p.region === s.region) && (!s.club || matchClub(p.venue))
-    && (!q || nameKey(p.title + p.venue + (p.artists || []).join('') + (p.castRaw || '')).includes(q)));
+    && (!q || nameKey(p.title + p.venue + (p.artists || []).join('') + (p.castRaw || '')).includes(q)))
+    .map((p, i) => ({ p, i, d: groupDay(p, t), on: isOngoing(p, t) }))
+    .sort((a, b) => a.d.localeCompare(b.d) || a.on - b.on || a.i - b.i).map(x => x.p);
 }
 export function renderSchedule() {
   const s = S.sched;
@@ -38,7 +45,7 @@ export function renderSchedule() {
     s.q = $('#q').value; s.region = $('#region').value; s.club = $('#club').checked; s.past = $('#past').checked;
     const list = filtered().slice(0, 300);
     $('#pfCount').textContent = `${filtered().length}개 공연`;
-    const groups = new Map(); list.forEach(p => (groups.get(p.startDate) || groups.set(p.startDate, []).get(p.startDate)).push(p));
+    const t = today(); const groups = new Map(); list.forEach(p => { const d = groupDay(p, t); (groups.get(d) || groups.set(d, []).get(d)).push(p); });
     $('#pfList').innerHTML = list.length ? [...groups].map(([d, ps]) => `<section class="pf-group"><h3>${esc(L.fmtDayKo(d))}</h3>${ps.map(p => perfRow(p)).join('')}</section>`).join('')
       : `<div class="empty">${S.perfs.some(p => p.endDate >= today()) ? '조건에 맞는 공연이 없어요.' : '아직 앞으로의 공연 일정이 없어요.<br><button class="link" type="button" data-act="show-past">지난 공연 보기</button>'}</div>`;
   };

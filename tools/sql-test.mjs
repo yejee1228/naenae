@@ -14,7 +14,7 @@ const ok = (cond, name, extra = '') => { if (cond) pass++; else fails.push(name 
 
 // Supabase가 기본으로 갖고 있는 것 흉내: auth 스키마·사용자 표·auth.uid()·역할
 await db.exec(`
-create role anon nologin; create role authenticated nologin;
+create role anon nologin; create role authenticated nologin; create role service_role nologin;
 create schema auth;
 create table auth.users (id uuid primary key, email text);
 create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;

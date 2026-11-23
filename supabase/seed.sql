@@ -1,6 +1,5 @@
 -- 내내(nae nae) 베타 — 예시 데이터 (P0-6). 시연용 프로젝트에 한 번 실행.
--- 운영자 계정: 먼저 관리자 이메일로 가입한 뒤 아래 줄의 이메일을 바꿔 실행 (결정 26: 운영자 1명)
--- update public.profiles set is_admin = true where id = (select id from auth.users where email = '운영자 이메일');
+-- 운영자 계정 지정은 supabase/admin.sql 로 (여러 명 가능)
 
 -- 라이브클럽 공연장 16곳 (R-24: 예시, 운영자가 계속 추가)
 insert into public.club_venues (name) values

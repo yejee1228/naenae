@@ -78,6 +78,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, summary:focus-visibl
 .badge.soon { background: var(--soon-soft); color: var(--soon); }
 .badge.open { background: var(--accent-soft); color: var(--accent); }
 .badge.tba { background: #eeede8; color: var(--ink-2); }
+.badge.ongoing { background: var(--accent-soft); color: var(--accent); }
+.pf > .badge.ongoing { margin-left: auto; flex-shrink: 0; font-style: normal; white-space: nowrap; }   /* 공연 카드 오른쪽 위 */
 .tag { font-size: 11px; font-weight: 700; color: #fff; background: #c43d3d; border-radius: 6px; padding: 1px 6px; margin-left: 6px; vertical-align: 2px; }
 .empty { background: var(--surface); border: 1px dashed var(--line); border-radius: var(--radius); padding: 22px; text-align: center; color: var(--ink-3); font-size: 14px; }
 
