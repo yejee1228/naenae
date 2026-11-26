@@ -5,6 +5,7 @@ import './admin.css';
 import api from '../shared/api/index.js';
 import { L } from '../shared/lib.js';
 import { REPORT_STATUS, REJECT_REASONS, eventStatus, kstToday, nameKey, extractArtists, REGIONS } from '../shared/domain.js';
+import { initArtists, renderArtists, artistAction, artistInput, artistChange, submitArtist, submitMerge, submitLink, initLinkBoxes, drawLinkBoxes, saveLinks, artistState } from './artists.js';
 
 const root = document.getElementById('admin');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -37,8 +38,8 @@ const tsw = (id, on, kind, label) => `<label class="tsw cell-sw" title="${label}
 const fieldErr = (form, name, msg) => { const el = form.querySelector(`[data-err="${name}"]`); if (el) el.textContent = msg || ''; return !msg; };
 
 /* ---------- 메뉴 · 틀 ---------- */
-const MENU = [['dashboard', '대시보드'], ['openings', '오픈 공지'], ['reports', '제보'], ['promotions', '이벤트'], ['performances', '공연'], ['venues', '라이브클럽'], ['members', '회원']];
-const TITLES = { dashboard: '대시보드', openings: '오픈 공지 관리', reports: '제보 관리', promotions: '이벤트 관리', performances: '공연 관리', venues: '라이브클럽 공연장', members: '회원' };
+const MENU = [['dashboard', '대시보드'], ['openings', '오픈 공지'], ['reports', '제보'], ['promotions', '이벤트'], ['performances', '공연'], ['artists', '아티스트'], ['venues', '라이브클럽'], ['members', '회원']];
+const TITLES = { dashboard: '대시보드', openings: '오픈 공지 관리', reports: '제보 관리', promotions: '이벤트 관리', performances: '공연 관리', artists: '아티스트', venues: '라이브클럽 공연장', members: '회원' };
 let pending = 0; let menuPushed = false; let section = '';
 
 function shell(sec, html) {
@@ -146,7 +147,7 @@ async function renderOpeningForm(id) {
     + (fr ? `<p class="adm-note">제보 「${esc(fr.title)}」(${esc(fr.nickname || '')})에서 가져온 내용이에요. 저장하면 제보가 '등록 완료'로 바뀌어요.</p>` : '')
     + `<form class="adm-form" id="openingForm" novalidate data-id="${esc(o.id || '')}">
     <label class="full">공연명 *<input type="text" name="title" maxlength="120" value="${esc(o.title || '')}" required><span class="fld-err" data-err="title"></span></label>
-    <label class="full">아티스트 <small>쉼표로 구분 — 내 아티스트 오픈 매칭에 쓰여요</small><input type="text" name="artists" maxlength="200" value="${esc((o.artists || []).join(', '))}" data-chips="artistChips"><span class="adm-artists" id="artistChips">${(o.artists || []).map(a => `<span class="chip static">${esc(a)}</span>`).join('')}</span></label>
+    <div class="full"><label>아티스트 <small>쉼표로 구분 — 이름마다 아래에 아티스트 박스가 생겨요. 눌러서 연결을 고를 수 있어요</small><input type="text" name="artists" maxlength="200" value="${esc((o.artists || []).join(', '))}" data-chips="linkBoxes"></label><div class="adm-artist-boxes" id="linkBoxes"></div></div>
     <label>공연장<input type="text" name="venue" maxlength="60" value="${esc(o.venue || '')}"></label>
     <label>공연일 <small>지나면 사용자 화면에서 자동으로 숨겨요</small><input type="date" name="showDate" value="${esc(o.showDate || '')}"></label>
     <label>티켓 오픈 날짜 <small>비우면 '오픈일 미정'</small><input type="date" name="openDate" value="${esc(at.date)}"></label>
@@ -159,7 +160,9 @@ async function renderOpeningForm(id) {
     <label class="check full"><input type="checkbox" name="isPublished"${o.isPublished !== false ? ' checked' : ''}> 게시 (끄면 사용자 화면에서 숨겨요)</label>
     <p class="ferr full" id="formErr" role="alert"></p>
     <div class="bar">${o.id ? `<button class="btn ghost small left" type="button" data-act="hide" data-kind="opening" data-id="${esc(o.id)}" data-on="${o.hidden ? '0' : '1'}">${o.hidden ? '숨김 해제' : '숨기기'}</button>` : ''}<button class="btn ghost" type="button" data-act="preview-opening">미리보기</button><button class="btn primary" type="submit">저장</button></div></form>`;
+  await afterOpeningForm(o);
 }
+const afterOpeningForm = o => initLinkBoxes('opening', o);
 const linkedLine = p => `연결됨: <b>${esc(p.title)}</b> · ${esc(fmtD(p.startDate))} · ${esc(p.venue || '')} <button class="link" type="button" data-act="perf-unlink">해제</button>`;
 function fromReportToOpening(r) {
   const [d, t] = String(r.openAtText || '').split(' ');
@@ -178,8 +181,8 @@ async function submitOpening(f) {
   if (!ok) { $('#formErr').textContent = ''; return; }
   const id = f.dataset.id; if (id) data.id = id;
   try {
-    if (!id && O.fromReport) { await api.admin.reports.register(O.fromReport.id, 'opening', data); O.fromReport = null; toast('저장했어요. 제보를 등록 완료로 바꿨어요.'); }
-    else { await api.admin.openings.save(data); toast('저장했어요.'); }
+    if (!id && O.fromReport) { const r = await api.admin.reports.register(O.fromReport.id, 'opening', data); await saveLinks('opening', r.createdId, data.artists); O.fromReport = null; toast('저장했어요. 제보를 등록 완료로 바꿨어요.'); }
+    else { const saved = await api.admin.openings.save(data); await saveLinks('opening', saved.id || id, data.artists); toast('저장했어요.'); }
     O.list = []; location.hash = '#/openings';
   } catch (e) { $('#formErr').textContent = errMsg(e); }
 }
@@ -208,15 +211,21 @@ function pickPerf(id) {
   if (!f.elements.artists.value.trim() && (p.artists || []).length) { f.elements.artists.value = p.artists.join(', '); drawChips(f.elements.artists); }
   $('#perfLinked').innerHTML = linkedLine(p); $('#perfPick').innerHTML = ''; $('#perfQ').value = '';
 }
-function drawChips(input) { const box = $('#' + input.dataset.chips); if (box) box.innerHTML = splitList(input.value).map(a => `<span class="chip static">${esc(a)}</span>`).join(''); }
+function drawChips(input) { if (input.dataset.chips === 'linkBoxes') { drawLinkBoxes(); return; } const box = $('#' + input.dataset.chips); if (box) box.innerHTML = splitList(input.value).map(a => `<span class="chip static">${esc(a)}</span>`).join(''); }
 
 /* ---------- ADM-03 제보 ---------- */
 const R = { list: [], status: 'submitted', current: null, dups: [] };
+const KIND = { opening: '티켓 오픈', performance: '공연 일정', artist: '아티스트' };
 const R_TABS = ['submitted', 'reviewing', 'registered', 'rejected', 'canceled'];
 async function renderReports(status, id) {
   R.status = R_TABS.includes(status) ? status : 'submitted';
   R.current = null; R.dups = [];
-  if (id) { try { R.current = await api.admin.reports.open(id); R.dups = await api.admin.reports.duplicates(id); } catch (e) { toast(errMsg(e)); } }   // 열면 '확인 중'으로 (R-72)
+  if (id) {
+    try {
+      R.current = await api.admin.reports.open(id);
+      R.dups = R.current.kind === 'artist' ? (await api.admin.artists.list(R.current.title, 'all')).map(a => ({ type: '아티스트', title: a.name + (a.disambig ? ` (${a.disambig})` : ''), status: a.status })) : await api.admin.reports.duplicates(id);
+    } catch (e) { toast(errMsg(e)); }
+  }   // 열면 '확인 중'으로 (R-72)
   R.list = await api.admin.reports.list();
   if (id && R.current) { pending = R.list.filter(r => r.status === 'submitted').length; updatePendingUi(); }
   const count = s => R.list.filter(r => r.status === s).length;
@@ -226,19 +235,23 @@ async function renderReports(status, id) {
     + `<div class="adm-tools"><div class="adm-chips" role="tablist" aria-label="제보 상태">${R_TABS.map(s => `<a role="tab" class="chip${R.status === s ? ' on' : ''}" aria-selected="${R.status === s}" href="#/reports/${s}">${REPORT_STATUS[s].label} ${count(s)}</a>`).join('')}</div></div>
     <div class="adm-split${R.current ? ' detail-open' : ''}"><div class="adm-list-wrap"><div class="adm-list" role="table" aria-label="제보 목록"><div class="adm-row head" style="${cols}"><span>접수 시각</span><span>종류</span><span>공연명</span><span>제보자</span><span>상태</span></div>
       ${rows.length ? rows.map(r => `<div class="adm-row click${R.current?.id === r.id ? ' on' : ''}" style="${cols}" data-href="#/reports/${R.status}/${encodeURIComponent(r.id)}" tabindex="0">
-        <span class="sub">${esc(fmtDT(r.createdAt))}</span><span data-m="hide">${r.kind === 'performance' ? '공연 일정' : '티켓 오픈'}</span><span class="t">${esc(r.title)}</span><span class="sub">${esc(r.nickname || '')}</span><span><span class="badge ${REPORT_STATUS[r.status].badge}">${REPORT_STATUS[r.status].label}</span></span><span class="go" aria-hidden="true">›</span></div>`).join('') : '<p class="adm-empty">이 상태의 제보가 없어요.</p>'}</div></div>
+        <span class="sub">${esc(fmtDT(r.createdAt))}</span><span data-m="hide">${KIND[r.kind] || '티켓 오픈'}</span><span class="t">${esc(r.title)}</span><span class="sub">${esc(r.nickname || '')}</span><span><span class="badge ${REPORT_STATUS[r.status].badge}">${REPORT_STATUS[r.status].label}</span></span><span class="go" aria-hidden="true">›</span></div>`).join('') : '<p class="adm-empty">이 상태의 제보가 없어요.</p>'}</div></div>
       <aside class="adm-detail" aria-label="제보 상세">${R.current ? reportDetail(R.current) : '<p class="muted small">왼쪽 목록에서 제보를 고르면 여기에 내용이 보여요.</p>'}</aside></div>`;
 }
 function reportDetail(r) {
   const st = REPORT_STATUS[r.status]; const nick = R.list.find(x => x.id === r.id)?.nickname || r.nickname || '';
   const link = u => (u && /^https?:\/\//.test(u) ? `<a class="link" href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(u)} ↗</a>` : esc(u || ''));
-  const kv = [['종류', r.kind === 'performance' ? '공연 일정' : '티켓 오픈 소식'], ['공연명', esc(r.title)], ['아티스트', esc((r.artists || []).join(', '))], ['공연장', esc(r.venue)], ['공연 날짜', esc(r.showDate)], ['티켓 오픈', esc(r.openAtText)], ['예매 링크', link(r.ticketUrl)], ['출처 링크', link(r.sourceUrl)], ['메모', esc(r.note)], ['제보자', esc(nick)], ['접수', esc(fmtDT(r.createdAt))]]
+  const members = (r.artistMembers || []).map(m => esc(m.name) + (m.id ? '' : ' <span class="muted">(이름만)</span>')).join(', ');
+  const kv = r.kind === 'artist' ? [['종류', '아티스트'], ['아티스트 이름', esc(r.title)], ['그룹/개인', r.artistKind === 'solo' ? '개인' : '그룹'], ['소속 그룹', r.artistGroup ? esc(r.artistGroup.name) + (r.artistGroup.id ? '' : ' <span class="muted">(목록에 없는 그룹)</span>') : ''], ['소속 아티스트', members], ['참고 링크', link(r.sourceUrl)], ['메모', esc(r.note)], ['제보자', esc(nick)], ['접수', esc(fmtDT(r.createdAt))]]
+      .filter(([, v]) => v).map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')
+    : [['종류', r.kind === 'performance' ? '공연 일정' : '티켓 오픈 소식'], ['공연명', esc(r.title)], ['아티스트', esc((r.artists || []).join(', '))], ['공연장', esc(r.venue)], ['공연 날짜', esc(r.showDate)], ['티켓 오픈', esc(r.openAtText)], ['예매 링크', link(r.ticketUrl)], ['출처 링크', link(r.sourceUrl)], ['메모', esc(r.note)], ['제보자', esc(nick)], ['접수', esc(fmtDT(r.createdAt))]]
     .filter(([, v]) => v).map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   const open = ['submitted', 'reviewing'].includes(r.status);
   return `<a class="link back-list" href="#/reports/${R.status}">← 목록</a><div class="op-top"><span class="badge ${st.badge}">${st.label}</span></div><h2>${esc(r.title)}</h2><dl class="kv">${kv}</dl>
-    <div><p class="eyebrow" style="margin:0 0 6px">같은 공연명 기존 공지·공연</p><div class="adm-dups">${R.dups.length ? R.dups.map(x => `<p><span class="src-chip">${esc(x.type)}</span> ${esc(x.title)} · ${esc(fmtD(x.showDate || x.startDate))}</p>`).join('') : '<p class="muted">비슷한 항목이 없어요.</p>'}</div></div>
-    ${open ? `<div class="acts"><button class="btn primary" type="button" data-act="report-reg" data-as="opening">공지로 등록</button><button class="btn" type="button" data-act="report-reg" data-as="performance">공연으로 등록</button><button class="btn ghost full" type="button" data-act="report-reject">등록 실패</button></div>`
-      : r.status === 'registered' ? `<p class="small">${r.registeredOpeningId ? `<a class="link" href="#/openings/${encodeURIComponent(r.registeredOpeningId)}">등록된 공지 보기 ›</a>` : `<a class="link" href="#/performances/${encodeURIComponent(r.registeredPerformanceId || '')}">등록된 공연 보기 ›</a>`}</p>`
+    <div><p class="eyebrow" style="margin:0 0 6px">${r.kind === 'artist' ? '같은 이름의 등록 아티스트' : '같은 공연명 기존 공지·공연'}</p><div class="adm-dups">${R.dups.length ? R.dups.map(x => `<p><span class="src-chip">${esc(x.type)}</span> ${esc(x.title)}${x.type === '아티스트' ? (x.status === 'hidden' ? ' · 숨김' : '') : ' · ' + esc(fmtD(x.showDate || x.startDate))}</p>`).join('') : '<p class="muted">비슷한 항목이 없어요.</p>'}</div></div>
+    ${open ? (r.kind === 'artist' ? `<div class="acts"><button class="btn primary" type="button" data-act="report-reg" data-as="artist">아티스트로 등록</button><button class="btn ghost" type="button" data-act="report-reject">등록 실패</button></div>`
+      : `<div class="acts"><button class="btn primary" type="button" data-act="report-reg" data-as="opening">공지로 등록</button><button class="btn" type="button" data-act="report-reg" data-as="performance">공연으로 등록</button><button class="btn ghost full" type="button" data-act="report-reject">등록 실패</button></div>`)
+      : r.status === 'registered' ? `<p class="small">${r.registeredArtistId ? `<a class="link" href="#/artists/edit/${encodeURIComponent(r.registeredArtistId)}">등록된 아티스트 보기 ›</a>` : r.registeredOpeningId ? `<a class="link" href="#/openings/${encodeURIComponent(r.registeredOpeningId)}">등록된 공지 보기 ›</a>` : `<a class="link" href="#/performances/${encodeURIComponent(r.registeredPerformanceId || '')}">등록된 공연 보기 ›</a>`}</p>`
         : r.status === 'rejected' ? `<p class="small">제보자에게 보이는 이유: <b>${esc(r.rejectReason || '')}</b></p>` : ''}`;
 }
 function rejectSheet() {
@@ -254,7 +267,12 @@ async function submitReject(f) {
 }
 function startRegister(as) {
   const r = { ...R.current, nickname: R.list.find(x => x.id === R.current.id)?.nickname };
-  if (as === 'opening') { O.fromReport = r; location.hash = '#/openings/new'; } else { P.fromReport = r; location.hash = '#/performances/new'; }
+  if (as === 'artist') {   // R-131: 제보 내용으로 등록 폼을 채움 → 저장하면 제보 '등록 완료'
+    const ig = (String(r.sourceUrl || '').match(/instagram\.com\/([A-Za-z0-9._]{1,30})/) || [])[1] || '';
+    const rel = r.artistKind === 'solo' ? (r.artistGroup?.id ? [r.artistGroup] : []) : (r.artistMembers || []).filter(m => m.id);
+    artistState.prefill = { name: r.title, kind: r.artistKind === 'solo' ? 'solo' : 'group', instagram: ig, relIds: rel.map(m => ({ id: m.id, name: m.name })) };
+    artistState.fromReport = r; artistState.returnTo = `#/reports/${R.status}`; location.hash = '#/artists/edit/new';
+  } else if (as === 'opening') { O.fromReport = r; location.hash = '#/openings/new'; } else { P.fromReport = r; location.hash = '#/performances/new'; }
 }
 
 /* ---------- ADM-04 이벤트 ---------- */
@@ -380,13 +398,14 @@ async function renderPerformanceForm(id) {
     <label>끝나는 날 <small>하루 공연이면 비워 두세요</small><input type="date" name="endDate" value="${esc(p.endDate && p.endDate !== p.startDate ? p.endDate : '')}"${ro}><span class="fld-err" data-err="endDate"></span></label>
     <label>공연장 *<input type="text" name="venue" maxlength="80" value="${esc(p.venue || '')}"${ro}><span class="fld-err" data-err="venue"></span></label>
     <label>지역 *${kopis ? `<input type="text" name="region" value="${esc(p.region || '')}" readonly>` : `<select name="region"><option value="">고르기</option>${REGIONS.map(r => `<option${p.region === r ? ' selected' : ''}>${r}</option>`).join('')}</select>`}<span class="fld-err" data-err="region"></span></label>
-    <label class="full">출연진(아티스트) <small>쉼표로 구분 — 관심 아티스트 매칭·추천에 쓰여요</small><input type="text" name="artists" maxlength="200" value="${esc((p.artists || []).join(', '))}" data-chips="pArtistChips"><span class="adm-artists" id="pArtistChips">${(p.artists || []).map(a => `<span class="chip static">${esc(a)}</span>`).join('')}</span>
+    <label class="full">출연진(아티스트) <small>쉼표로 구분 — 이름마다 아래에 아티스트 박스가 생겨요. 눌러서 연결을 고를 수 있어요 (한 공연에 여러 명)</small><input type="text" name="artists" maxlength="200" value="${esc((p.artists || []).join(', '))}" data-chips="linkBoxes"><span class="adm-artist-boxes" id="linkBoxes"></span>
       ${suggest.length ? `<span class="small">공연명에서 찾은 후보: ${suggest.map(s => `<button class="link" type="button" data-act="artist-add" data-v="${esc(s)}">${esc(s)} +</button>`).join(' ')}</span>` : ''}</label>
     ${kopis && p.castRaw ? `<p class="full small muted" style="margin:0">KOPIS 출연진(참고): ${esc(p.castRaw)}</p>` : ''}
     ${kopis ? (p.ticketLinks || []).length ? `<p class="full small muted" style="margin:0">예매처: ${p.ticketLinks.map(l => esc(l.name)).join(' · ')}</p>` : ''
       : `<label>예매처 이름<input type="text" name="linkName" maxlength="40" value="${esc(link.name || '')}" placeholder="예: NOL 티켓"></label><label>예매처 링크 <small>https만</small><input type="url" name="linkUrl" inputmode="url" placeholder="https://" value="${esc(link.url || '')}"><span class="fld-err" data-err="linkUrl"></span></label>`}
     <p class="ferr full" id="formErr" role="alert"></p>
     <div class="bar">${p.id ? `<button class="btn ghost small left" type="button" data-act="hide" data-kind="performance" data-id="${esc(p.id)}" data-on="${p.hidden ? '0' : '1'}">${p.hidden ? '숨김 해제' : '숨기기'}</button>` : ''}<button class="btn primary" type="submit">저장</button></div></form>`;
+  await initLinkBoxes('performance', p);
 }
 async function submitPerf(f) {
   const v = k => String(f.elements[k]?.value || '').trim(); const kopis = f.dataset.kopis === '1'; const id = f.dataset.id;
@@ -403,8 +422,8 @@ async function submitPerf(f) {
     if (id) data.id = id;
   }
   try {
-    if (!id && P.fromReport) { await api.admin.reports.register(P.fromReport.id, 'performance', data); P.fromReport = null; toast('저장했어요. 제보를 등록 완료로 바꿨어요.'); }
-    else { await api.admin.performances.save(data); toast('저장했어요.'); }
+    if (!id && P.fromReport) { const r = await api.admin.reports.register(P.fromReport.id, 'performance', data); await saveLinks('performance', r.createdId, artists); P.fromReport = null; toast('저장했어요. 제보를 등록 완료로 바꿨어요.'); }
+    else { const saved = await api.admin.performances.save(data); await saveLinks('performance', saved.id || id, artists); toast('저장했어요.'); }
     P.list = []; location.hash = '#/performances';
   } catch (e) { $('#formErr').textContent = errMsg(e); }
 }
@@ -479,6 +498,7 @@ async function route() {
       case 'reports': await renderReports(a, b); break;
       case 'promotions': await (a ? renderPromotionForm(a) : renderPromotions()); break;
       case 'performances': await (a ? renderPerformanceForm(a) : renderPerformances()); break;
+      case 'artists': await renderArtists(a, b); break;
       case 'venues': await renderVenues(); break;
       case 'members': await renderMembers(); break;
     }
@@ -495,6 +515,7 @@ document.addEventListener('click', async e => {
     return;
   }
   const act = a.dataset.act;
+  if (act.startsWith('ar-')) { artistAction(act, a); return; }
   switch (act) {
     case 'menu': openMenu(); break;
     case 'menu-close': closeMenu(); break;
@@ -529,7 +550,7 @@ document.addEventListener('click', e => {
   $$(`[data-filter="${c.dataset.filter}"]`).forEach(x => { x.classList.toggle('on', x === c); x.setAttribute('aria-pressed', String(x === c)); });
 });
 document.addEventListener('submit', e => {
-  const f = e.target; const fns = { loginForm: submitLogin, openingForm: submitOpening, rejectForm: submitReject, promoForm: submitPromo, perfForm: submitPerf, venueForm: submitVenue };
+  const f = e.target; const fns = { loginForm: submitLogin, openingForm: submitOpening, rejectForm: submitReject, promoForm: submitPromo, perfForm: submitPerf, venueForm: submitVenue, artistForm: submitArtist, mergeForm: submitMerge, linkForm: submitLink };
   if (fns[f.id]) { e.preventDefault(); fns[f.id](f); }
 });
 document.addEventListener('input', e => {
@@ -538,6 +559,7 @@ document.addEventListener('input', e => {
   if (t.dataset.search === 'P') { P.q = t.value; P.page = 0; drawPerformances(); }
   if (t.dataset.search === 'M') { M.q = t.value; clearTimeout(memberTimer); memberTimer = setTimeout(drawMembers, 250); }
   if (t.id === 'perfQ') drawPerfPick(t.value);
+  artistInput(t);
   if (t.dataset.chips) drawChips(t);
   if (t.name && t.form) fieldErr(t.form, t.name, '');
 });
@@ -551,9 +573,11 @@ document.addEventListener('change', async e => {
   if (t.name === 'noTime') { const time = t.form.elements.openTime; time.disabled = t.checked; if (t.checked) time.value = ''; }
   if (t.name === 'tag' && t.form?.id === 'promoForm') { const c = t.form.elements.tagCustom; c.disabled = t.value !== '__custom'; if (!c.disabled) c.focus(); }
   if (t.name === 'thumbFile') pickThumb(t);
+  artistChange(t);
 });
 window.addEventListener('hashchange', () => { menuPushed = false; route(); });
 
+initArtists({ main, head, sheet, closeSheet, toast, errMsg, fieldErr });
 (async () => {
   try { await api.init(); } catch (e) { root.innerHTML = `<p class="adm-empty">연결하지 못했어요. ${esc(errMsg(e))}</p>`; return; }
   api.auth.onChange(() => { if (!api.auth.current() || !api.auth.current().isAdmin) route(); });

@@ -476,3 +476,66 @@ h2.sub { font-size: 16px; margin: 26px 0 10px; }
 
 /* 이벤트 이미지 */
 .ev-thumb.img, .ev-hero.img { background-size: cover; background-position: center; }
+
+/* ---------- 아티스트 (12_아티스트_기획 · ART-01 카드 · ART-02 박스) ---------- */
+.res-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 4px 0 10px; }
+.res-head { font-size: 16px; font-weight: 800; margin: 0; }
+.res-head .count { font-size: 16px; color: var(--accent); font-weight: 800; }
+.jump-chip { border: 0; background: var(--accent-soft); color: var(--accent); border-radius: 999px; min-height: 36px; padding: 0 12px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.artist-sec:not(:empty) { margin: 22px 0 8px; padding-top: 18px; border-top: 1px solid var(--line); }
+.artist-sec .report-cta, .artist-sec .btn { margin-top: 10px; }
+.ar-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.ar-card { min-width: 0; display: flex; align-items: flex-start; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 10px 12px 12px; }
+.ar-card.muted { background: #faf8fb; }
+.ar-main { flex: 1; min-width: 0; display: flex; align-items: flex-start; gap: 12px; border: 0; background: none; padding: 0; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+span.ar-main { cursor: default; }
+.ar-photo { --c: #d9cce6; flex: none; width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--c) center / cover no-repeat; color: #3d2a52; font-weight: 800; font-size: 20px; }
+.ar-photo.sm { width: 44px; height: 44px; font-size: 16px; }
+.ar-photo.empty { background: var(--surface); border: 1px dashed #b9b6ae; }
+.ar-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; line-height: 1.4; }
+.ar-body small { font-size: 13px; color: #6b6a64; }
+.ar-perf { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ar-perf b { color: var(--accent); font-weight: 700; }
+.ar-note { color: var(--accent) !important; font-weight: 700; font-size: 12px !important; }
+.ar-name { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ar-name b { font-size: 16px; }
+.ar-name em { font-style: normal; font-size: 11px; font-weight: 700; color: var(--ink-2); background: #eeede8; border-radius: 6px; padding: 1px 6px; }
+.ar-side { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.ar-icons { display: flex; gap: 4px; }
+.ar-ic { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 10px; color: var(--ink-2); background: none; border: 0; cursor: pointer; font-size: 18px; text-decoration: none; }
+.ar-ic svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ar-ic.heart { border: 1px solid var(--line); color: var(--accent); background: var(--surface); }
+.ar-ic.heart.on { border-color: transparent; background: var(--accent-soft); }
+.ar-search { box-sizing: border-box; width: 84px; min-height: 36px; display: flex; align-items: center; justify-content: center; gap: 4px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); font: inherit; font-size: 12px; font-weight: 700; color: var(--ink); cursor: pointer; }
+.ar-search svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
+.ar-searchbox { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 6px 0 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; margin: 0 0 14px; }
+.ar-searchbox:focus-within { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.ar-searchbox svg { width: 18px; height: 18px; fill: none; stroke: #6b6a64; stroke-width: 2; stroke-linecap: round; flex: none; }
+.ar-searchbox input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 16px; min-height: 44px; }
+.ar-clear { width: 36px; height: 36px; border: 0; background: none; font-size: 20px; color: #6b6a64; cursor: pointer; }
+.ar-empty { display: grid; justify-items: center; gap: 8px; color: var(--ink-2); }
+.ar-empty b { color: var(--ink); }
+.ar-box { display: flex; align-items: center; gap: 10px; min-height: 72px; padding: 10px 8px 10px 12px; border: 1px solid #d9cce6; border-radius: 12px; background: var(--surface); width: 100%; box-sizing: border-box; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.ar-box.sel { border: 2px solid var(--accent); background: #faf6fd; }
+.ar-box input[type=checkbox], .ar-box input[type=radio] { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }
+.ar-box .ar-body b { font-size: 14px; }
+.ar-box .ar-body small { font-size: 12px; }
+.seg2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.seg2 .lbl { grid-column: 1 / -1; }
+.seg2 button { min-height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); font: inherit; font-size: 14px; color: var(--ink-2); cursor: pointer; }
+.seg2 button[aria-pressed=true] { border: 2px solid var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 800; }
+.lbl { font-size: 14px; font-weight: 700; }
+.lbl small { font-weight: 500; font-size: 12px; color: #6b6a64; }
+.pick-sec { display: grid; gap: 8px; }
+.pick-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pick-chip { display: inline-flex; align-items: center; gap: 2px; font-size: 13px; font-weight: 700; color: #5b3d78; background: var(--accent-soft); border-radius: 999px; padding: 4px 4px 4px 10px; }
+.pick-chip.name-only { font-weight: 500; color: var(--ink-2); background: var(--surface); border: 1px dashed #8b8a83; }
+.pick-chip button { width: 26px; height: 26px; border: 0; background: none; color: inherit; font-size: 15px; cursor: pointer; }
+.pick-box { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); }
+.pick-box:focus-within { border-color: var(--accent); }
+.pick-search { display: flex; align-items: center; gap: 8px; min-height: 46px; padding: 0 12px; }
+.pick-search svg { width: 16px; height: 16px; fill: none; stroke: #6b6a64; stroke-width: 2; stroke-linecap: round; flex: none; }
+.pick-search input { flex: 1; min-width: 0; border: 0; outline: 0; font-size: 16px; background: transparent; }
+#pickResults:not(:empty) { display: grid; gap: 6px; padding: 6px 8px 8px; border-top: 1px solid var(--line); }
+.pick-add { min-height: 44px; border: 0; border-radius: 10px; background: #faf8fb; text-align: left; padding: 0 12px; font: inherit; font-size: 14px; font-weight: 700; color: #5b3d78; cursor: pointer; }
+#pickResults .ar-box, .adm-pick .ar-box { min-width: 0; }

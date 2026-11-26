@@ -6,6 +6,7 @@ import { nameKey } from '../../shared/domain.js';
 import { esc, page, $, track } from '../ui.js';
 import { S, today, perfById, openingByPerf, isInterested } from '../state.js';
 import { openingCard, reportCta } from './open.js';
+import { drawScheduleArtists, isArtistOn } from './artists.js';
 
 const WD = ['일', '월', '화', '수', '목', '금', '토'];
 const matchClub = venue => { const v = nameKey(venue); return S.clubVenues.some(x => nameKey(x) && v.includes(nameKey(x))); };
@@ -39,12 +40,14 @@ export function renderSchedule() {
       <div class="filter-row"><select id="region" aria-label="지역"><option value="">전체 지역</option>${regions.map(r => `<option ${s.region === r ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>
         <label class="switch"><input type="checkbox" id="club"${s.club ? ' checked' : ''}> 라이브클럽만</label>
         <label class="switch"><input type="checkbox" id="past"${s.past ? ' checked' : ''}> 지난 공연</label></div></div>
-    <p class="caption" id="pfCount"></p><div id="pfList"></div>${reportCta('schedule')}`, { keepScroll: S.keepScroll });
+    <div class="res-row"><h2 class="res-head" id="pfCount"></h2><button type="button" class="jump-chip" id="artistJump" data-act="artist-jump" hidden></button></div><div id="pfList"></div><section id="artistSec" class="artist-sec" aria-label="아티스트 검색 결과"></section>${reportCta('schedule')}`, { keepScroll: S.keepScroll });
   S.keepScroll = false;
   const draw = () => {
+    const qChanged = s.q !== $('#q').value; if (qChanged && $('#artistSec')) $('#artistSec').dataset.more = '0';
     s.q = $('#q').value; s.region = $('#region').value; s.club = $('#club').checked; s.past = $('#past').checked;
     const list = filtered().slice(0, 300);
-    $('#pfCount').textContent = `${filtered().length}개 공연`;
+    $('#pfCount').innerHTML = `공연 <span class="count">${filtered().length}</span>`;
+    drawScheduleArtists(s.q);
     const t = today(); const groups = new Map(); list.forEach(p => { const d = groupDay(p, t); (groups.get(d) || groups.set(d, []).get(d)).push(p); });
     $('#pfList').innerHTML = list.length ? [...groups].map(([d, ps]) => `<section class="pf-group"><h3>${esc(L.fmtDayKo(d))}</h3>${ps.map(p => perfRow(p)).join('')}</section>`).join('')
       : `<div class="empty">${S.perfs.some(p => p.endDate >= today()) ? '조건에 맞는 공연이 없어요.' : '아직 앞으로의 공연 일정이 없어요.<br><button class="link" type="button" data-act="show-past">지난 공연 보기</button>'}</div>`;
@@ -71,7 +74,12 @@ export function renderPerf(id) {
     ${op ? `<div class="op-list">${openingCard(op, 'perf')}</div>` : ''}
     ${p.ticketLinks.filter(l => L.safeURL(l.url)).length ? `<div class="links">${p.ticketLinks.filter(l => L.safeURL(l.url)).map(l => `<a class="btn small ghost" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" data-track="ticket_link_click" data-item="${esc(p.id)}" data-value="${esc(l.name)}">${esc(l.name)} ↗</a>`).join('')}</div>` : '<p class="op-note">예매처 정보 없음</p>'}
     <h2 class="sub">출연 아티스트</h2>
-    ${artists.length ? `<div class="chips">${artists.map(a => { const on = user && isInterested(a); return `<button type="button" class="chip ${on ? 'on' : ''}" data-act="interest" data-name="${esc(a)}" data-from="perf" aria-pressed="${!!on}">${on ? '♥' : '♡'} ${esc(a)}</button>`; }).join('')}</div>` : '<p class="op-note">아티스트 정보가 없어요.</p>'}
+    ${artists.length ? `<div class="chips">${artists.map(a => {   // 아티스트가 연결돼 있으면 ID로 담음 (R-129), 아니면 이름으로
+      const link = (p.links || []).find(l => nameKey(l.name) === nameKey(a));
+      const on = user && (link ? isArtistOn(link.artistId) : isInterested(a));
+      return link ? `<button type="button" class="chip ${on ? 'on' : ''}" data-act="interest-artist" data-id="${esc(link.artistId)}" data-name="${esc(a)}" data-from="perf" aria-pressed="${!!on}">${on ? '♥' : '♡'} ${esc(a)}</button>`
+        : `<button type="button" class="chip ${on ? 'on' : ''}" data-act="interest" data-name="${esc(a)}" data-from="perf" aria-pressed="${!!on}">${on ? '♥' : '♡'} ${esc(a)}</button>`;
+    }).join('')}</div>` : '<p class="op-note">아티스트 정보가 없어요.</p>'}
     ${p.castRaw ? `<p class="op-note">KOPIS 출연진: ${esc(p.castRaw)}</p>` : ''}
     <h2 class="sub">${esc(CONFIG.myName)}에 기록</h2>
     <div class="rec-box">

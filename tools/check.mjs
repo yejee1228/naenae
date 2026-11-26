@@ -119,6 +119,13 @@ assert.ok(D.matchesArtist('hyukoh', { title: 'HYUKOH 단독 콘서트' }));
 assert.ok(D.matchesArtist('김수유', { title: 'x', castRaw: '이한결, 김수유' }));
 assert.ok(!D.matchesArtist('a', { title: 'a' }));                      // 1글자는 매칭 안 함
 assert.equal(D.nameKey(' Ａ B '), 'ab');
+// 아티스트 ID 매칭 (R-130): 연결돼 있으면 ID로, 같은 이름이 다른 아티스트에 연결돼 있으면 안 맞음, 연결 없으면 이름·별칭으로
+const dawnBand = { name: '새벽', artistId: 'g1', artist: { id: 'g1', name: '새벽', aliases: ['DAWN'] } };
+assert.ok(D.matchesInterest(dawnBand, { title: 'x', artists: ['새벽'], links: [{ artistId: 'g1', name: '새벽' }] }));
+assert.ok(!D.matchesInterest(dawnBand, { title: '새벽 단독', artists: ['새벽'], links: [{ artistId: 's1', name: '새벽' }] }));   // 동명이인
+assert.ok(D.matchesInterest(dawnBand, { title: 'DAWN LIVE', artists: [] }));                                                 // 연결 전 · 별칭
+assert.ok(D.matchesInterest({ name: '혁 오' }, { title: 'x', artists: ['혁오'] }));                                           // 이전 데이터(이름만)
+assert.deepEqual(plain(D.matchedArtists([dawnBand, { name: 'BB' }], { title: 'x', artists: ['BB', '새벽'], links: [{ artistId: 'g1', name: '새벽' }] })), ['새벽', 'BB']);
 assert.equal(D.shortRegion('서울특별시'), '서울'); assert.equal(D.shortRegion('전남광주통합특별시'), '전남광주');
 // 날짜
 assert.equal(D.addDays('2026-12-31', 1), '2027-01-01'); assert.equal(D.dayDiff('2026-11-23', '2026-12-01'), 8);

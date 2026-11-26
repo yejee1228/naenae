@@ -1,0 +1,16 @@
+{
+  "note": "시연용 예시 아티스트 (모두 가상의 이름). 운영자가 확인한 아티스트 몇 팀만 먼저 등록하는 방식을 보여 줌 (12_아티스트_기획 §2)",
+  "artists": [
+    { "id": "demo-a1", "name": "새벽두시밴드", "kind": "group", "disambig": "", "aliases": ["새벽 두시 밴드"], "photoCredit": "" },
+    { "id": "demo-a2", "name": "오렌지노트", "kind": "group", "disambig": "", "aliases": ["Orange Note"], "photoCredit": "" },
+    { "id": "demo-a3", "name": "달빛수영장", "kind": "group", "disambig": "", "aliases": [], "photoCredit": "" },
+    { "id": "demo-a4", "name": "문라이터", "kind": "solo", "disambig": "싱어송라이터", "aliases": ["Moonlighter"], "photoCredit": "" },
+    { "id": "demo-a5", "name": "코튼캔디", "kind": "group", "disambig": "", "aliases": [], "photoCredit": "" },
+    { "id": "demo-a6", "name": "윤하늘", "kind": "solo", "disambig": "", "aliases": [], "photoCredit": "" },
+    { "id": "demo-a7", "name": "블루벨", "kind": "group", "disambig": "밴드 · 서울", "aliases": [], "photoCredit": "" },
+    { "id": "demo-a8", "name": "블루벨", "kind": "solo", "disambig": "싱어송라이터 · 부산", "aliases": [], "photoCredit": "" }
+  ],
+  "members": [
+    { "groupId": "demo-a1", "memberId": "demo-a6" }
+  ]
+}

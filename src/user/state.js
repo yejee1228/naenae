@@ -1,7 +1,7 @@
 // 내내 사용자 화면 — 상태와 데이터 불러오기
 import api from '../shared/api/index.js';
 import { L } from '../shared/lib.js';
-import { kstToday, matchedArtists } from '../shared/domain.js';
+import { kstToday, matchedArtists, nameKey, interestName } from '../shared/domain.js';
 import { store, toast, track, sheet, esc } from './ui.js';
 import { CONFIG } from '../shared/config.js';
 
@@ -39,7 +39,9 @@ export async function loadMine() {
 
 /* 0.5 배지 계산(computeBadges)용 기록 모양 */
 export const badgeRecords = () => S.records.map(r => ({ ...r, refId: r.performanceId ? 'kopis:' + r.performanceId : r.openingId ? 'open:' + r.openingId : '' }));
-export const isInterested = name => S.interests.some(i => i.name.normalize('NFKC').toLowerCase().replace(/\s/g, '') === String(name).normalize('NFKC').toLowerCase().replace(/\s/g, ''));
+// 이름(별칭 포함)으로 관심 아티스트 찾기 — 아티스트가 연결되지 않은 공연 칩용
+export const interestByName = name => S.interests.find(i => [interestName(i), ...(i.artist?.aliases || [])].some(n => nameKey(n) === nameKey(name)));
+export const isInterested = name => !!interestByName(name);
 export const myArtistsIn = item => (api.auth.current() ? matchedArtists(S.interests, item) : []);
 
 /* 새 배지 축하 창 (R-47): 이달 배지 중 처음 본 것 하나 */

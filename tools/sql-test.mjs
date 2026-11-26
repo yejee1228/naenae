@@ -100,6 +100,48 @@ const rep2 = (await one('a', `select (public.create_report('{"title":"취소할 
 await as('a', `select public.cancel_report($1)`, [rep2]);
 ok((await one('a', `select status from public.reports where id = $1`, [rep2])).status === 'canceled', '제보 완료 상태에서 취소 (R-75)');
 
+// 아티스트 DB (12_아티스트_기획, R-120~140)
+const save = async (who, obj) => (await one(who, `select public.admin_artist_save($1::jsonb) c`, [JSON.stringify(obj)])).c;
+ok((await err('a', `select public.admin_artist_save('{"name":"x"}'::jsonb)`)).includes('forbidden'), '회원은 아티스트 등록 못 함 (R-120)');
+ok((await err('a', `insert into public.artists (name) values ('직접')`)).includes('permission denied'), '아티스트 표에 직접 쓰기 막힘');
+const band = await save('admin', { name: '테스트밴드', kind: 'group', disambig: '', instagram: 'test.band', aliases: ['TESTBAND'], linkPerfIds: [perf] });
+ok(band.perfCount === 1 && band.next?.id === perf && band.aliases[0] === 'TESTBAND', '등록 + 체크한 공연 연결 + 별칭 (R-137)', JSON.stringify(band).slice(0, 160));
+ok((await one('a', `select artist_id from public.interests where user_id = $1`, [ID.a])).artist_id === band.id, '이름으로 담아 둔 관심 아티스트가 자동 연결 (R-135)');
+ok((await err('admin', `select public.admin_artist_save('{"name":"테스트 밴드","kind":"group"}'::jsonb)`)).includes('구분 문구'), '같은 이름은 구분 문구 필수 (R-122)');
+ok((await err('admin', `select public.admin_artist_save('{"name":"x","instagram":"https://instagram.com/x"}'::jsonb)`)).includes('인스타그램'), '인스타그램은 아이디만 (R-132)');
+const s1 = await save('admin', { name: '새벽', kind: 'group', disambig: '밴드 · 부산' });
+const s2 = await save('admin', { name: '새벽', kind: 'solo', disambig: '싱어송라이터' });
+const member = await save('admin', { name: '한결', kind: 'solo', disambig: '', groupIds: [band.id] });
+ok(member.groups[0]?.id === band.id, '개인의 소속 그룹 연결 (R-121)');
+const p2 = (await as('admin', `insert into public.performances (source, title, start_date, end_date, artists) values ('manual', '새벽 X 테스트 밴드', current_date + 1, current_date + 1, '{새벽,테스트 밴드}') returning id`)).rows[0].id;
+const links = (await as('anon', `select artist_id from public.performance_artists where performance_id = $1`, [p2])).rows.map(r => r.artist_id);
+ok(links.length === 1 && links[0] === band.id, '새 공연 자동 연결: 1명과 맞는 이름만, 동명이인은 연결 안 함 (R-125)', JSON.stringify(links));
+const found = (await one('anon', `select public.search_artists('새벽') r`)).r;
+ok(found.length === 2 && found.every(x => x.name === '새벽'), '비회원 아티스트 검색 · 동명이인 둘 다 (R-126)');
+ok((await one('anon', `select public.search_artists('testband') r`)).r[0]?.id === band.id, '별칭으로도 검색 (R-123)');
+await as('admin', `select public.admin_links_save('performance', $1, $2::jsonb)`, [p2, JSON.stringify([{ name: '새벽', artistId: s1.id }, { name: '테스트 밴드', artistId: band.id }])]);
+ok((await as('anon', `select 1 from public.performance_artists where performance_id = $1`, [p2])).rows.length === 2, '공연 아티스트 박스 저장 — 여러 명 연결 (R-139)');
+await as('admin', `update public.performances set artists = '{새벽,테스트 밴드,새이름}' where id = $1`, [p2]);
+ok((await as('anon', `select 1 from public.performance_artists where performance_id = $1 and source = 'admin'`, [p2])).rows.length === 2, '자동 수집·수정이 운영자 연결을 지우지 않음');
+ok((await err('a', `select public.admin_links_save('performance', $1, '[]'::jsonb)`, [p2])).includes('forbidden'), '회원은 연결 못 바꿈');
+const cands = (await one('admin', `select public.admin_candidates('') r`)).r;
+ok(cands.some(c => c.name === '새이름') && !cands.some(c => c.name === '테스트 밴드' || c.name === '새벽'), '후보: 아직 등록 안 된 이름만 (R-124)', JSON.stringify(cands.map(c => c.name)));
+await as('admin', `select public.admin_candidate_ignore('새이름')`);
+ok(!(await one('admin', `select public.admin_candidates('') r`)).r.some(c => c.name === '새이름'), '후보 제외');
+const merged = (await one('admin', `select public.admin_artist_merge('새이름', $1, array[$2::uuid]) c`, [s2.id, p2])).c;
+ok(merged.aliases.includes('새이름') && (await as('anon', `select 1 from public.performance_artists where performance_id = $1 and artist_id = $2`, [p2, s2.id])).rows.length === 1, '합치기: 별칭 + 체크한 공연 연결 (R-138)');
+ok((await err('a', `insert into public.interests (user_id, name, artist_id, source) values ($1, '테스트밴드', $2, 'search')`, [ID.a, band.id])).includes('duplicate'), '같은 아티스트 관심 중복 막힘');
+await as('a', `insert into public.interests (user_id, name, artist_id, source) values ($1, '새벽', $2, 'search'), ($1, '새벽', $3, 'search')`, [ID.a, s1.id, s2.id]);
+ok((await as('a', `select 1 from public.interests where user_id = $1 and artist_id is not null`, [ID.a])).rows.length === 3, '동명이인은 각각 관심 등록 가능');
+await as('admin', `select public.admin_artist_hide($1)`, [s2.id]);
+ok((await one('anon', `select public.search_artists('새벽') r`)).r.length === 1 && (await as('anon', `select 1 from public.artists where id = $1`, [s2.id])).rows.length === 0, '숨긴 아티스트는 안 보임 (R-134)');
+ok((await err('a', `select public.create_report('{"kind":"artist","title":"새 아티스트"}'::jsonb)`)).includes('링크'), '아티스트 제보는 링크 필수 (R-131)');
+const arep = (await one('a', `select (public.create_report($1::jsonb)).id`, [JSON.stringify({ kind: 'artist', title: '새 아티스트', artistKind: 'group', sourceUrl: 'https://instagram.com/x', artistMembers: [{ id: member.id }, { name: '도윤' }] })])).id;
+ok(!!arep, '아티스트 제보 만들기');
+const areg = (await one('admin', `select public.admin_register_report($1, 'artist', '{"name":"새 아티스트","kind":"group","memberIds":[]}'::jsonb) r`, [arep])).r;
+ok(areg.report.status === 'registered' && (await one('a', `select registered_artist_id from public.reports where id = $1`, [arep])).registered_artist_id === areg.createdId, '아티스트 제보 등록 → 제보자에게 연결 (R-140)');
+ok((await err('a', `select public.link_interests($1)`, [band.id])).includes('permission denied'), '회원은 내부 연결 함수 못 부름');
+
 // 운영자 화면
 ok((await err('a', `select public.admin_dashboard()`)).includes('forbidden'), '회원은 대시보드 못 봄');
 const dash = (await one('admin', `select public.admin_dashboard() d`)).d;

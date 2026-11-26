@@ -146,3 +146,29 @@ a.adm-card:hover { border-color: var(--soon); }
   .back-list { display: inline-block; }
   .adm-inline input { max-width: none; }
 }
+
+/* ---------- 아티스트 (ADM-08, 12_아티스트_기획 §5-6) ---------- */
+.adm-ar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.adm-ar-grid a.ar-box { text-decoration: none; }
+.adm-artist-boxes { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin-top: 10px; }
+.adm-artist-boxes:empty { display: none; }
+.ar-box.empty { border: 1px dashed #b9b6ae; background: var(--surface); }
+.ar-box .warn { color: #a4501c !important; font-weight: 700; }
+.adm-pick { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; margin-top: 6px; }
+.adm-pick:empty { display: none; }
+.adm-linklist { display: grid; border: 1px solid var(--line); border-radius: 10px; margin-top: 8px; max-height: 360px; overflow: auto; background: var(--surface); }
+.adm-linkrow { display: flex !important; align-items: flex-start; gap: 10px; padding: 8px 10px; border-bottom: 1px solid #efeaf3; font-weight: 400 !important; }
+.adm-linkrow:last-child { border-bottom: 0; }
+.adm-linkrow input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--accent); flex: none; }
+.adm-linkrow span { display: grid; gap: 2px; min-width: 0; }
+.adm-linkrow small { font-size: 12px; color: #6b6a64; }
+.adm-linkrow .ok { color: var(--accent); }
+.adm-seg { border: 0; margin: 0; padding: 0; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.adm-seg legend { font-size: 13px; font-weight: 700; padding: 0; margin-bottom: 6px; }
+.adm-seg label { display: flex !important; align-items: center; gap: 6px; font-weight: 500 !important; }
+.adm-ar-photo { display: flex; gap: 14px; align-items: flex-start; }
+.adm-ar-photo .ar-photo { width: 72px; height: 72px; font-size: 26px; }
+.adm-merge { display: grid; gap: 8px; }
+.adm-merge .lbl, #linkForm .lbl { margin: 8px 0 0; }
+.adm-merge-prev { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 12px; background: #faf8fb; border-radius: 12px; }
+#linkForm .acts { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }

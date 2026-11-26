@@ -4,14 +4,17 @@ import { createClient } from '@supabase/supabase-js';
 import { ApiError, fail, fromSupabase } from './errors.js';
 import { nameKey } from '../domain.js';
 
-const toPerf = r => r && ({ id: r.id, source: r.source, kopisId: r.kopis_id, title: r.title, startDate: r.start_date, endDate: r.end_date, venue: r.venue, region: r.region, artists: r.artists || [], artistsLocked: r.artists_locked, castRaw: r.cast_raw || '', ticketLinks: r.ticket_links || [], hidden: r.is_hidden, timeText: r.time_text, priceText: r.price_text, ageText: r.age_text, updatedAt: r.updated_at });
+const toLinks = rows => (rows || []).map(l => ({ artistId: l.artist_id, name: l.name || '' }));
+const toPerf = r => r && ({ id: r.id, source: r.source, kopisId: r.kopis_id, title: r.title, startDate: r.start_date, endDate: r.end_date, venue: r.venue, region: r.region, artists: r.artists || [], artistsLocked: r.artists_locked, castRaw: r.cast_raw || '', ticketLinks: r.ticket_links || [], hidden: r.is_hidden, timeText: r.time_text, priceText: r.price_text, ageText: r.age_text, updatedAt: r.updated_at, links: toLinks(r.performance_artists) });
 const fromPerf = p => ({ id: p.id, source: p.source || 'manual', title: p.title, start_date: p.startDate, end_date: p.endDate || p.startDate, venue: p.venue || '', region: p.region || '', artists: p.artists || [], ticket_links: p.ticketLinks || [] });
-const toOpening = r => r && ({ id: r.id, title: r.title, artists: r.artists || [], venue: r.venue, showDate: r.show_date, openAt: r.open_at, openHasTime: r.open_has_time, vendor: r.vendor, ticketUrl: r.ticket_url, note: r.note, performanceId: r.performance_id, isPublished: r.is_published, hidden: r.is_hidden, source: r.source, reportId: r.report_id, updatedAt: r.updated_at });
+const toOpening = r => r && ({ id: r.id, title: r.title, artists: r.artists || [], venue: r.venue, showDate: r.show_date, openAt: r.open_at, openHasTime: r.open_has_time, vendor: r.vendor, ticketUrl: r.ticket_url, note: r.note, performanceId: r.performance_id, isPublished: r.is_published, hidden: r.is_hidden, source: r.source, reportId: r.report_id, updatedAt: r.updated_at, links: toLinks(r.opening_artists) });
+const PERF_SEL = '*, performance_artists(artist_id, name)'; const OPEN_SEL = '*, opening_artists(artist_id, name)';
+const toInterest = r => ({ name: r.name, artistId: r.artist_id || null, source: r.source, createdAt: r.created_at, artist: r.artists ? { id: r.artists.id, name: r.artists.name, kind: r.artists.kind, disambig: r.artists.disambig, aliases: (r.artists.artist_aliases || []).map(x => x.alias) } : null });
 const fromOpening = o => ({ id: o.id, title: o.title, artists: o.artists || [], venue: o.venue || '', show_date: o.showDate || null, open_at: o.openAt || null, open_has_time: o.openHasTime !== false, vendor: o.vendor || '', ticket_url: o.ticketUrl || '', note: o.note || '', performance_id: o.performanceId || null, is_published: o.isPublished !== false });
 const toPromo = (r, url) => r && ({ id: r.id, title: r.title, tag: r.tag, summary: r.summary, body: r.body, notes: r.notes || [], startDate: r.start_date, endDate: r.end_date, applyLabel: r.apply_label, applyUrl: r.apply_url, thumbnail: r.thumbnail_path ? url(r.thumbnail_path) : null, thumbnailPath: r.thumbnail_path, isPublished: r.is_published, hidden: r.is_hidden, updatedAt: r.updated_at });
 const fromPromo = p => ({ id: p.id, title: p.title, tag: p.tag || '', summary: p.summary || '', body: p.body || '', notes: p.notes || [], start_date: p.startDate, end_date: p.endDate, apply_label: p.applyLabel || '응모하기', apply_url: p.applyUrl, thumbnail_path: p.thumbnailPath || null, is_published: p.isPublished !== false });
 const toRecord = r => r && ({ id: r.id, type: r.type, performanceId: r.performance_id, openingId: r.opening_id, title: r.title, date: r.date, venue: r.venue, region: r.region, artists: r.artists || [], createdAt: r.created_at, updatedAt: r.updated_at, deletedAt: r.deleted_at });
-const toReport = r => r && ({ id: r.id, userId: r.user_id, kind: r.kind, title: r.title, artists: r.artists || [], venue: r.venue, showDate: r.show_date, openAtText: r.open_at_text, ticketUrl: r.ticket_url, sourceUrl: r.source_url, note: r.note, status: r.status, rejectReason: r.reject_reason, registeredOpeningId: r.registered_opening_id, registeredPerformanceId: r.registered_performance_id, userSeen: r.user_seen, createdAt: r.created_at, updatedAt: r.updated_at, nickname: r.profiles?.nickname });
+const toReport = r => r && ({ id: r.id, userId: r.user_id, kind: r.kind, title: r.title, artists: r.artists || [], venue: r.venue, showDate: r.show_date, openAtText: r.open_at_text, ticketUrl: r.ticket_url, sourceUrl: r.source_url, note: r.note, status: r.status, rejectReason: r.reject_reason, registeredOpeningId: r.registered_opening_id, registeredPerformanceId: r.registered_performance_id, registeredArtistId: r.registered_artist_id || null, artistKind: r.artist_kind || null, artistGroup: r.artist_group || null, artistMembers: r.artist_members || [], userSeen: r.user_seen, createdAt: r.created_at, updatedAt: r.updated_at, nickname: r.profiles?.nickname });
 
 export function createSupabaseBackend(cfg) {
   const sb = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });   // R-09a 로그인 유지
@@ -65,13 +68,13 @@ export function createSupabaseBackend(cfg) {
   };
 
   const content = {
-    async openings() { return (await q(sb.from('openings').select('*').order('open_at', { ascending: true, nullsFirst: false }))).map(toOpening); },
+    async openings() { return (await q(sb.from('openings').select(OPEN_SEL).order('open_at', { ascending: true, nullsFirst: false }))).map(toOpening); },
     async performances() {
       const since = new Date(Date.now() - 60 * 864e5).toISOString().slice(0, 10);
-      const rows = []; for (let from = 0; ; from += 1000) { const page = await q(sb.from('performances').select('*').gte('end_date', since).order('start_date').range(from, from + 999)); rows.push(...page); if (page.length < 1000) break; }
+      const rows = []; for (let from = 0; ; from += 1000) { const page = await q(sb.from('performances').select(PERF_SEL).gte('end_date', since).order('start_date').range(from, from + 999)); rows.push(...page); if (page.length < 1000) break; }
       return rows.map(toPerf);
     },
-    async performance(id) { const r = await q(sb.from('performances').select('*').eq('id', id).maybeSingle()); if (!r) fail('not_found', '공연 정보를 찾지 못했어요.'); return toPerf(r); },
+    async performance(id) { const r = await q(sb.from('performances').select(PERF_SEL).eq('id', id).maybeSingle()); if (!r) fail('not_found', '공연 정보를 찾지 못했어요.'); return toPerf(r); },
     async promotions() { return (await q(sb.from('promotions').select('*').order('end_date'))).map(r => toPromo(r, publicUrl)); },
     async clubVenues() { return (await q(sb.from('club_venues').select('name'))).map(r => r.name); },
     async meta() { return { updatedAt: (await q(sb.from('performances').select('updated_at').eq('source', 'kopis').order('updated_at', { ascending: false }).limit(1)))[0]?.updated_at || '', source: 'KOPIS' }; }
@@ -94,10 +97,25 @@ export function createSupabaseBackend(cfg) {
     async remove(id) { await q(sb.from('records').update({ deleted_at: new Date().toISOString() }).eq('id', id)); },
     async restore(id) { return toRecord(await q(sb.from('records').update({ deleted_at: null }).eq('id', id).select().single())); }
   };
+  // 관심 아티스트 (R-129): ref = { artistId, name } — artistId가 있으면 등록된 아티스트로, 없으면 이름으로(이전 데이터·연결 전 공연)
+  const ISEL = 'name, source, created_at, artist_id, artists(id, name, kind, disambig, artist_aliases(alias))';
   const interests = {
-    async list() { return (await q(sb.from('interests').select('name, source, created_at'))).map(r => ({ name: r.name, source: r.source, createdAt: r.created_at })); },
-    async add(name, source = 'manual') { try { const r = await q(sb.from('interests').insert({ user_id: uid(), name: String(name).trim(), source }).select().single()); return { name: r.name, source: r.source, createdAt: r.created_at }; } catch (e) { if (e.code === 'conflict') fail('conflict', '이미 관심 아티스트예요.'); throw e; } },
-    async remove(name) { const list = await interests.list(); const hit = list.find(i => nameKey(i.name) === nameKey(name)); if (hit) await q(sb.from('interests').delete().eq('user_id', uid()).eq('name', hit.name)); }
+    async list() { return (await q(sb.from('interests').select(ISEL).order('created_at', { ascending: false }))).map(toInterest); },
+    async add(ref, source = 'manual') {
+      const r0 = typeof ref === 'string' ? { name: ref } : ref;
+      const row = { user_id: uid(), name: String(r0.name || '').trim(), source, artist_id: r0.artistId || null };
+      try { return toInterest(await q(sb.from('interests').insert(row).select(ISEL).single())); } catch (e) { if (e.code === 'conflict') fail('conflict', '이미 관심 아티스트예요.'); throw e; }
+    },
+    async remove(ref) {
+      const r0 = typeof ref === 'string' ? { name: ref } : ref;
+      if (r0.artistId) { await q(sb.from('interests').delete().eq('user_id', uid()).eq('artist_id', r0.artistId)); return; }
+      const hit = (await interests.list()).find(i => !i.artistId && nameKey(i.name) === nameKey(r0.name));
+      if (hit) await q(sb.from('interests').delete().eq('user_id', uid()).is('artist_id', null).eq('name', hit.name));
+    }
+  };
+  const artists = {
+    async search(text, lim = 20) { return String(text || '').trim() ? rpc('search_artists', { p_q: String(text).trim(), p_lim: lim }) : []; },
+    async cards(ids) { return (ids || []).length ? rpc('artist_cards', { p_ids: ids }) : []; }
   };
   const badges = {
     async seen() { return (await q(sb.from('badge_seen').select('period, badge_key'))).map(r => `${r.period}:${r.badge_key}`); },
@@ -116,7 +134,7 @@ export function createSupabaseBackend(cfg) {
     isAdmin: () => !!profile?.is_admin,
     async dashboard() { const d = await rpc('admin_dashboard'); const upcoming = (await q(sb.from('openings').select('*').gte('open_at', new Date().toISOString()).order('open_at').limit(3))).map(toOpening); return { ...d, upcoming, metrics7d: d.metrics7d || {} }; },
     openings: {
-      async list() { return (await q(sb.from('openings').select('*').order('updated_at', { ascending: false }))).map(toOpening); },
+      async list() { return (await q(sb.from('openings').select(OPEN_SEL).order('updated_at', { ascending: false }))).map(toOpening); },
       async save(o) { const row = fromOpening(o); if (!row.id) delete row.id; row.updated_by = uid(); if (!o.id) row.created_by = uid(); return toOpening(await save('openings', row)); },
       async setPublished(id, on) { return toOpening(await save('openings', { id, is_published: !!on })); },
       async hide(id, hidden = true) { return toOpening(await save('openings', { id, is_hidden: !!hidden })); }
@@ -149,8 +167,23 @@ export function createSupabaseBackend(cfg) {
         await q(sb.storage.from('promotions').upload(path, file, { contentType: file.type })); return path;
       }
     },
+    artists: {
+      async list(qs = '', status = 'all') { return rpc('admin_artists', { p_q: qs, p_status: status }); },
+      async save(a) { return rpc('admin_artist_save', { p: a }); },
+      async merge(alias, intoId, perfIds = [], openingIds = []) { return rpc('admin_artist_merge', { p_alias: alias, p_into: intoId, p_perf_ids: perfIds, p_opening_ids: openingIds }); },
+      async hide(id, hidden = true) { return rpc('admin_artist_hide', { p_id: id, p_hidden: !!hidden }); },
+      async candidates(qs = '', status = 'pending') { return rpc('admin_candidates', { p_q: qs, p_status: status }); },
+      async ignore(name, on = true) { await rpc('admin_candidate_ignore', { p_name: name, p_ignore: !!on }); },
+      async uploadPhoto(file) {
+        if (!/^image\/(jpeg|png|webp)$/.test(file.type)) fail('validation', 'JPG·PNG·WEBP 이미지만 올릴 수 있어요.'); if (file.size > 2 * 1024 * 1024) fail('validation', '2MB 이하 이미지만 올릴 수 있어요.');
+        const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${file.type.split('/')[1].replace('jpeg', 'jpg')}`;
+        await q(sb.storage.from('artist-photos').upload(path, file, { contentType: file.type }));
+        return sb.storage.from('artist-photos').getPublicUrl(path).data.publicUrl;
+      }
+    },
+    async saveLinks(kind, id, links) { await rpc('admin_links_save', { p_kind: kind, p_id: id, p_links: links }); },
     performances: {
-      async list() { return (await q(sb.from('performances').select('*').order('start_date', { ascending: false }).limit(2000))).map(toPerf); },
+      async list() { return (await q(sb.from('performances').select(PERF_SEL).order('start_date', { ascending: false }).limit(2000))).map(toPerf); },
       async save(p) { const row = fromPerf(p); if (!row.id) { delete row.id; row.created_by = uid(); row.artists_locked = true; } row.updated_by = uid(); return toPerf(await save('performances', row)); },
       async hide(id, hidden = true) { return toPerf(await save('performances', { id, is_hidden: !!hidden })); }
     },
@@ -173,6 +206,6 @@ export function createSupabaseBackend(cfg) {
   return {
     backend: 'supabase', isDemo: false,
     async init() { const { data } = await sb.auth.getSession(); await refresh(data.session); return current(); },
-    auth, content, records, interests, badges, reports, logs, admin
+    auth, content, records, interests, artists, badges, reports, logs, admin
   };
 }

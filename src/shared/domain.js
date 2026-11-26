@@ -55,7 +55,19 @@ export function matchesArtist(name, item) {
   if (nameKey(item.title).includes(k)) return true;
   return String(item.castRaw || '').split(/\s*,\s*/).some(c => nameKey(c) === k);
 }
-export const matchedArtists = (interests, item) => (interests || []).map(i => i.name).filter(n => matchesArtist(n, item));
+/* 관심 아티스트 매칭 (R-130): 공연·공지에 아티스트 ID가 연결돼 있으면 ID로,
+ * 같은 이름이 다른 아티스트(동명이인)에 연결돼 있으면 안 맞음, 연결이 없으면 이름·별칭으로 */
+export const interestName = i => i?.artist?.name || i?.name || '';
+export function matchesInterest(i, item) {
+  if (!i || !item) return false;
+  const keys = new Set([interestName(i), ...(i.artist?.aliases || [])].map(nameKey).filter(k => k.length >= 2));
+  const links = item.links || [];
+  if (i.artistId && links.some(l => l.artistId === i.artistId)) return true;
+  if (links.some(l => keys.has(nameKey(l.name)))) return false;   // 그 이름은 다른 아티스트로 연결됨
+  return [...keys].some(k => matchesArtist(k, item));
+}
+export const matchedArtists = (interests, item) => (interests || []).filter(i => matchesInterest(i, item)).map(interestName);
+export const sameInterest = (i, ref) => (ref.artistId ? i.artistId === ref.artistId : !i.artistId && nameKey(i.name) === nameKey(ref.name));
 
 /* ---------- 날짜 ---------- */
 export const kstToday = (d = new Date()) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(d);

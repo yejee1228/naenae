@@ -7,6 +7,7 @@ import demoPerfs from '../../../data/demo/performances.json';
 import demoOpenings from '../../../data/demo/openings.json';
 import demoEvents from '../../../data/demo/events.json';
 import demoSeed from '../../../data/demo/seed.json';
+import demoArtists from '../../../data/demo/artists.json';
 
 // 로컬 전용 KOPIS 스냅샷(있으면 실제 공연으로 채움, git에 안 올라감 — tools/kopis-snapshot.mjs)
 // 개발 서버(npm run dev)에서만 읽음 → 빌드 결과(공개 사이트)에는 절대 들어가지 않음 (KOPIS 이용 조건 확인 전, 결정 4)
@@ -44,13 +45,66 @@ function seedDb() {
   });
   const promotions = demoEvents.map(e => ({ id: e.id, title: e.title, tag: e.tag, summary: e.summary, body: (e.body || []).join('\n\n'), notes: e.notes || [], startDate: rel(e.start), endDate: rel(e.end),
     applyLabel: e.applyLabel, applyUrl: e.applyUrl, thumbnail: null, emoji: e.emoji, color: e.color, isPublished: true, hidden: false, sample: true, updatedAt: now() }));
-  return {
+  const out = {
     seededAt: now(), performances: perfs, openings, promotions,
     clubVenues: CLUB.map((name, i) => ({ id: i + 1, name, hidden: false })),
     users: { 'local-admin': { id: 'local-admin', email: ADMIN_EMAIL, nickname: '운영자', provider: 'email', isAdmin: true, marketing: false, reportUnseen: false, createdAt: now() } },
     data: {}, reports: [], reportLogs: [], audit: [], logs: [],
     kopisRuns: [{ id: 1, startedAt: snapshot ? snapshot.fetchedAt || now() : now(), finishedAt: now(), status: snapshot ? 'success' : 'success', listCount: perfs.length, detailCount: 0, remainingDetails: 0, error: null, trigger: 'schedule', note: snapshot ? 'KOPIS 스냅샷' : '로컬 예시 데이터' }]
   };
+  seedArtists(out);
+  return out;
+}
+
+/* ---------- 아티스트 DB (12_아티스트_기획 · R-120~140) — SQL 함수(20261126000001_artists.sql)와 같은 규칙 ---------- */
+function seedArtists(d) {
+  d.artists = demoArtists.artists.map(a => ({ photoUrl: '', photoCredit: '', instagram: '', status: 'active', source: 'manual', reportId: null, createdAt: now(), updatedAt: now(), ...a, sample: true }));
+  d.artistMembers = copy(demoArtists.members);
+  d.ignoredNames = [];
+  const prev = db; db = d;   // 자동 연결은 db를 봄
+  d.performances.forEach(autoLink); d.openings.forEach(autoLink);
+  Object.values(d.data || {}).forEach(u => (u.interests || []).forEach(i => { if (!i.artistId) { const id = artistMatch(i.name); if (id) i.artistId = id; } }));
+  db = prev || d;
+}
+const activeArtists = () => db.artists.filter(a => a.status === 'active');
+function artistMatch(name) {
+  const k = nameKey(name); if (!k) return null;
+  const hits = activeArtists().filter(a => nameKey(a.name) === k || (a.aliases || []).some(x => nameKey(x) === k));
+  return hits.length === 1 ? hits[0].id : null;
+}
+function autoLink(row) {   // R-125: 1명과만 맞는 이름은 자동 연결, 운영자 연결은 그대로
+  row.links = (row.links || []).filter(l => l.source === 'admin');
+  (row.artists || []).forEach(n => { const id = artistMatch(n); if (id && !row.links.some(l => l.artistId === id)) row.links.push({ artistId: id, name: n, source: 'auto' }); });
+}
+const linkOut = row => ({ ...row, links: (row.links || []).map(l => ({ artistId: l.artistId, name: l.name })) });
+function artistCard(id, admin = false) {
+  const a = db.artists.find(x => x.id === id); if (!a || (a.status !== 'active' && !admin)) return null;
+  const t = kstToday(); const brief = p => ({ id: p.id, title: p.title, date: p.startDate, endDate: p.endDate, venue: p.venue });
+  const perfs = db.performances.filter(p => !p.hidden && (p.links || []).some(l => l.artistId === id));
+  const next = perfs.filter(p => p.endDate >= t).sort((x, y) => x.startDate.localeCompare(y.startDate))[0];
+  const last = perfs.filter(p => p.endDate < t).sort((x, y) => y.endDate.localeCompare(x.endDate))[0];
+  const rel = (ids, key) => ids.map(i => db.artists.find(x => x.id === i)).filter(x => x && x.status === 'active').map(x => ({ id: x.id, name: x.name })).sort((x, y) => x.name.localeCompare(y.name, 'ko'));
+  return copy({ id: a.id, name: a.name, kind: a.kind, disambig: a.disambig || '', photoUrl: a.photoUrl || '', photoCredit: a.photoCredit || '', instagram: a.instagram || '', status: a.status, source: a.source, updatedAt: a.updatedAt,
+    aliases: [...(a.aliases || [])].sort(), groups: rel(db.artistMembers.filter(m => m.memberId === id).map(m => m.groupId)), members: rel(db.artistMembers.filter(m => m.groupId === id).map(m => m.memberId)),
+    next: next ? brief(next) : null, last: last ? brief(last) : null, perfCount: perfs.length });
+}
+function linkInterests(artistId) {   // R-135
+  Object.values(db.data).forEach(d => {
+    const has = d.interests.some(i => i.artistId === artistId);
+    d.interests = d.interests.filter(i => {
+      if (i.artistId || artistMatch(i.name) !== artistId) return true;
+      if (has || d.interests.some(j => j.artistId === artistId)) return false;
+      i.artistId = artistId; i.name = db.artists.find(a => a.id === artistId)?.name || i.name; return true;
+    });
+  });
+}
+function searchArtists(text, lim = 20) {
+  const k = nameKey(text); if (!k) return [];
+  const t = kstToday();
+  const rank = a => { const keys = [a.name, ...(a.aliases || [])].map(nameKey); return keys.includes(k) ? 0 : keys.some(x => x.startsWith(k)) ? 1 : keys.some(x => x.includes(k)) ? 2 : -1; };
+  return activeArtists().map(a => ({ a, r: rank(a), nx: db.performances.some(p => !p.hidden && p.endDate >= t && (p.links || []).some(l => l.artistId === a.id)) }))
+    .filter(x => x.r >= 0).sort((x, y) => x.r - y.r || y.nx - x.nx || x.a.name.localeCompare(y.a.name, 'ko'))
+    .slice(0, Math.min(Math.max(lim, 1), 50)).map(x => artistCard(x.a.id));
 }
 
 let db = null; let session = null; let pendingProfile = null;
@@ -59,6 +113,7 @@ function load() {
   try { if (new URLSearchParams(location.search).has('reset')) localStorage.removeItem(DB_KEY); } catch { /* 무시 */ }
   try { db = JSON.parse(localStorage.getItem(DB_KEY) || 'null'); } catch { db = null; }
   if (!db || !db.performances) { db = seedDb(); save(); }
+  if (!db.artists) { seedArtists(db); save(); }   // 아티스트 DB 이전 데이터에 추가
   try { session = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch { session = null; }
   if (session?.pending) { pendingProfile = session.pending; session = null; }
   if (session && !db.users[session.id]) session = null;
@@ -81,7 +136,7 @@ function seedFor(userId) {
     const p = byId[pid];
     d.records.push({ id: uid(), type: r.type, performanceId: p ? p.id : null, openingId: null, title: p?.title || r.title, date: p ? p.startDate : rel(r.date), venue: p?.venue || r.venue, region: p?.region || r.region, artists: p?.artists || r.artists || [], createdAt: now(), updatedAt: now(), deletedAt: null });
   });
-  demoSeed.artists.forEach(a => d.interests.push({ name: a.name, source: 'manual', createdAt: now() }));
+  demoSeed.artists.forEach(a => { const id = artistMatch(a.name); d.interests.push({ name: a.name, artistId: id, source: id ? 'search' : 'manual', createdAt: now() }); });
 }
 
 /* ---------- 인증 ---------- */
@@ -144,9 +199,9 @@ const auth = {
 
 /* ---------- 콘텐츠 ---------- */
 const content = {
-  async openings() { return copy(db.openings.filter(o => o.isPublished && !o.hidden)); },
-  async performances() { return copy(db.performances.filter(p => !p.hidden)); },
-  async performance(id) { const p = db.performances.find(x => x.id === id && !x.hidden); if (!p) fail('not_found', '공연 정보를 찾지 못했어요.'); return copy(p); },
+  async openings() { return copy(db.openings.filter(o => o.isPublished && !o.hidden).map(linkOut)); },
+  async performances() { return copy(db.performances.filter(p => !p.hidden).map(linkOut)); },
+  async performance(id) { const p = db.performances.find(x => x.id === id && !x.hidden); if (!p) fail('not_found', '공연 정보를 찾지 못했어요.'); return copy(linkOut(p)); },
   async promotions() { return copy(db.promotions.filter(p => p.isPublished && !p.hidden)); },
   async clubVenues() { return db.clubVenues.filter(v => !v.hidden).map(v => v.name); },
   async meta() { const last = db.kopisRuns.find(r => r.status === 'success'); return { updatedAt: last?.finishedAt || db.seededAt, source: snapshot ? 'KOPIS (스냅샷)' : '예시 데이터' }; }
@@ -203,15 +258,30 @@ const records = {
   async remove(id) { const r = mine().records.find(x => x.id === id); if (r) { r.deletedAt = now(); save(); } },
   async restore(id) { const r = mine().records.find(x => x.id === id); if (!r) fail('not_found', '되돌릴 수 없어요.'); r.deletedAt = null; save(); return copy(r); }
 };
+// 관심 아티스트 (R-129): ref = { artistId, name }. artistId가 있으면 등록된 아티스트로, 없으면 이름으로(이전 데이터·연결 전 공연)
+const decorate = i => { const a = i.artistId && db.artists.find(x => x.id === i.artistId && x.status === 'active'); return { name: i.name, artistId: a ? i.artistId : null, source: i.source, createdAt: i.createdAt, artist: a ? { id: a.id, name: a.name, kind: a.kind, disambig: a.disambig || '', aliases: [...(a.aliases || [])] } : null }; };
 const interests = {
-  async list() { return copy(mine().interests); },
-  async add(name, source = 'manual') {
-    const n = String(name || '').normalize('NFKC').trim().replace(/\s+/g, ' ');
+  async list() { return copy(mine().interests.map(decorate).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))); },
+  async add(ref, source = 'manual') {
+    const r0 = typeof ref === 'string' ? { name: ref } : ref; const d = mine();
+    if (r0.artistId) {
+      const a = db.artists.find(x => x.id === r0.artistId && x.status === 'active'); if (!a) fail('not_found', '아티스트를 찾지 못했어요.');
+      if (d.interests.some(i => i.artistId === a.id)) fail('conflict', '이미 관심 아티스트예요.');
+      const item = { name: a.name, artistId: a.id, source, createdAt: now() }; d.interests.push(item); save(); return copy(decorate(item));
+    }
+    const n = String(r0.name || '').normalize('NFKC').trim().replace(/\s+/g, ' ');
     if (!n || n.length > 40) fail('validation', '아티스트 이름을 확인해 주세요.');
-    const d = mine(); if (d.interests.some(i => nameKey(i.name) === nameKey(n))) fail('conflict', '이미 관심 아티스트예요.');
-    const item = { name: n, source, createdAt: now() }; d.interests.push(item); save(); return copy(item);
+    if (d.interests.some(i => !i.artistId && nameKey(i.name) === nameKey(n))) fail('conflict', '이미 관심 아티스트예요.');
+    const item = { name: n, artistId: null, source, createdAt: now() }; d.interests.push(item); save(); return copy(decorate(item));
   },
-  async remove(name) { const d = mine(); d.interests = d.interests.filter(i => nameKey(i.name) !== nameKey(name)); save(); }
+  async remove(ref) {
+    const r0 = typeof ref === 'string' ? { name: ref } : ref; const d = mine();
+    d.interests = d.interests.filter(i => (r0.artistId ? i.artistId !== r0.artistId : !!i.artistId || nameKey(i.name) !== nameKey(r0.name))); save();
+  }
+};
+const artists = {
+  async search(text, lim = 20) { return searchArtists(text, lim); },
+  async cards(ids) { return (ids || []).map(id => artistCard(id)).filter(Boolean); }
 };
 const badges = {
   async seen() { return copy(mine().badgeSeen); },
@@ -231,10 +301,16 @@ const reports = {
     const u = me(); if (!u) fail('unauthorized', '제보하려면 로그인해 주세요.');
     const hourAgo = Date.now() - 3600e3;
     if (db.reports.filter(r => r.userId === u.id && Date.parse(r.createdAt) > hourAgo).length >= 10) fail('rate_limited', '잠시 후 다시 시도해 주세요.');   // R-77
-    const msg = validateReport(input); if (msg) fail('validation', msg);
-    const r = { id: uid(), userId: u.id, kind: input.kind === 'performance' ? 'performance' : 'opening', title: input.title.trim(), artists: input.artists || [], venue: input.venue || '', showDate: input.showDate || null,
-      openAtText: input.openAtText || '', ticketUrl: input.ticketUrl || '', sourceUrl: input.sourceUrl || '', note: input.note || '', status: 'submitted', rejectReason: null,
-      registeredOpeningId: null, registeredPerformanceId: null, userSeen: true, createdAt: now(), updatedAt: now() };
+    const isArtist = input.kind === 'artist';
+    if (isArtist) {   // R-131
+      if (!String(input.title || '').trim()) fail('validation', '아티스트 이름을 입력해 주세요.');
+      if (!/^https?:\/\/\S+$/.test(String(input.sourceUrl || '').trim())) fail('validation', '인스타그램 또는 참고 링크를 https:// 주소로 알려 주세요.');
+      if (String(input.note || '').length > 300) fail('validation', '메모는 300자까지 쓸 수 있어요.');
+    } else { const msg = validateReport(input); if (msg) fail('validation', msg); }
+    const r = { id: uid(), userId: u.id, kind: isArtist ? 'artist' : input.kind === 'performance' ? 'performance' : 'opening', title: input.title.trim(), artists: input.artists || [], venue: input.venue || '', showDate: input.showDate || null,
+      openAtText: input.openAtText || '', ticketUrl: input.ticketUrl || '', sourceUrl: String(input.sourceUrl || '').trim(), note: input.note || '', status: 'submitted', rejectReason: null,
+      artistKind: isArtist ? (input.artistKind === 'solo' ? 'solo' : 'group') : null, artistGroup: isArtist && input.artistGroup ? input.artistGroup : null, artistMembers: isArtist ? (input.artistMembers || []).slice(0, 20) : [],
+      registeredOpeningId: null, registeredPerformanceId: null, registeredArtistId: null, userSeen: true, createdAt: now(), updatedAt: now() };
     db.reports.unshift(r); db.reportLogs.push({ reportId: r.id, from: null, to: 'submitted', actorId: u.id, createdAt: now() }); save(); return copy(r);
   },
   async listMine() { const u = me(); if (!u) fail('unauthorized'); return copy(db.reports.filter(r => r.userId === u.id)); },
@@ -247,7 +323,7 @@ const reports = {
 };
 
 /* ---------- 이용 기록 ---------- */
-const ALLOWED = new Set(['visit', 'open_mode', 'schedule_filter', 'perf_view', 'reco_view', 'reco_click', 'hexagon_open', 'event_view', 'event_detail_view', 'badge_guide_view', 'badge_guide_open', 'calendar_open', 'calendar_add', 'opening_click', 'ticket_link_click', 'planned_add', 'attended_add', 'record_edit', 'record_remove', 'record_restore', 'artist_interest', 'artist_uninterest', 'badge_earned', 'badge_scope', 'stamp_open', 'photo_select', 'photo_error', 'stamp_ready', 'share_click', 'share_done', 'share_cancel', 'share_error', 'share_unsupported', 'save_click', 'auth_gate', 'auth_view', 'login_attempt', 'login_success', 'signup_attempt', 'signup_complete', 'settings_view', 'marketing_toggle', 'logout', 'report_open', 'report_view', 'report_submit', 'report_mine_view', 'report_reason_open', 'report_cancel', 'event_apply_click', 'inapp_escape_click']);
+const ALLOWED = new Set(['visit', 'open_mode', 'schedule_filter', 'perf_view', 'reco_view', 'reco_click', 'hexagon_open', 'event_view', 'event_detail_view', 'badge_guide_view', 'badge_guide_open', 'calendar_open', 'calendar_add', 'opening_click', 'ticket_link_click', 'planned_add', 'attended_add', 'record_edit', 'record_remove', 'record_restore', 'artist_interest', 'artist_uninterest', 'badge_earned', 'badge_scope', 'stamp_open', 'photo_select', 'photo_error', 'stamp_ready', 'share_click', 'share_done', 'share_cancel', 'share_error', 'share_unsupported', 'save_click', 'auth_gate', 'auth_view', 'login_attempt', 'login_success', 'signup_attempt', 'signup_complete', 'settings_view', 'marketing_toggle', 'logout', 'artist_search', 'artist_schedule', 'artist_instagram', 'report_open', 'report_view', 'report_submit', 'report_mine_view', 'report_reason_open', 'report_cancel', 'event_apply_click', 'inapp_escape_click']);
 const logs = {
   async track(events) {
     const list = (Array.isArray(events) ? events : [events]).filter(e => ALLOWED.has(e.event) && e.visitorId).slice(0, 20);
@@ -292,8 +368,15 @@ const admin = {
     };
   },
   openings: {
-    async list() { requireAdmin(); return copy(db.openings); },
-    async save(data) { requireAdmin(); if (!String(data.title || '').trim()) fail('validation', '공연명은 필수 항목이에요.'); return upsert('openings', data, { isPublished: true, hidden: false, source: 'admin', reportId: null, artists: [], openHasTime: true }); },
+    async list() { requireAdmin(); return copy(db.openings.map(linkOut)); },
+    async save(data) {
+      requireAdmin(); if (!String(data.title || '').trim()) fail('validation', '공연명은 필수 항목이에요.');
+      const prev = data.id && db.openings.find(o => o.id === data.id); const before = prev ? JSON.stringify(prev.artists) : null;
+      const { links: _l, ...rest } = data;
+      const out = upsert('openings', rest, { isPublished: true, hidden: false, source: 'admin', reportId: null, artists: [], openHasTime: true, links: [] });
+      const row = db.openings.find(o => o.id === out.id); if (!prev || before !== JSON.stringify(row.artists)) { autoLink(row); save(); }
+      return copy(linkOut(row));
+    },
     async setPublished(id, on) { return setFlag('openings', id, 'isPublished', !!on); },
     async hide(id, hidden = true) { return setFlag('openings', id, 'hidden', !!hidden); }
   },
@@ -311,6 +394,7 @@ const admin = {
       if (!r || !['submitted', 'reviewing'].includes(r.status)) fail('conflict', '이미 처리된 제보예요.');
       let created;
       if (as === 'opening') { created = await admin.openings.save({ ...data, source: 'report', reportId: id }); r.registeredOpeningId = created.id; }
+      else if (as === 'artist') { created = await admin.artists.save({ ...data, source: 'report', reportId: id }); r.registeredArtistId = created.id; }
       else { created = await admin.performances.save({ ...data, source: 'manual' }); r.registeredPerformanceId = created.id; }
       transition(r, 'registered'); save(); return { report: copy(r), createdId: created.id };
     },
@@ -337,16 +421,87 @@ const admin = {
     }
   },
   performances: {
-    async list() { requireAdmin(); return copy(db.performances); },
+    async list() { requireAdmin(); return copy(db.performances.map(linkOut)); },
     async save(data) {
       requireAdmin();
       if (!String(data.title || '').trim() || !data.startDate || !data.venue) fail('validation', '공연명·공연일·공연장은 필수 항목이에요.');
       const prev = data.id && db.performances.find(p => p.id === data.id);
-      const patch = { ...data, endDate: data.endDate || data.startDate, region: shortRegion(data.region || '') };
-      if (prev && JSON.stringify(prev.artists) !== JSON.stringify(data.artists)) patch.artistsLocked = true;   // R-106
-      return upsert('performances', patch, { source: 'manual', kopisId: null, artists: [], artistsLocked: true, castRaw: '', ticketLinks: [], hidden: false });
+      const { links: _l, ...rest } = data;
+      const patch = { ...rest, endDate: data.endDate || data.startDate, region: shortRegion(data.region || '') };
+      const changed = !prev || JSON.stringify(prev.artists) !== JSON.stringify(data.artists);
+      if (prev && changed) patch.artistsLocked = true;   // R-106
+      const out = upsert('performances', patch, { source: 'manual', kopisId: null, artists: [], artistsLocked: true, castRaw: '', ticketLinks: [], hidden: false, links: [] });
+      const row = db.performances.find(p => p.id === out.id); if (changed) { autoLink(row); save(); }
+      return copy(linkOut(row));
     },
     async hide(id, hidden = true) { return setFlag('performances', id, 'hidden', !!hidden); }
+  },
+  artists: {
+    async list(q = '', status = 'all') {
+      requireAdmin(); const k = nameKey(q);
+      return db.artists.filter(a => (status === 'all' || a.status === status) && (!k || [a.name, ...(a.aliases || [])].some(x => nameKey(x).includes(k))))
+        .sort((x, y) => x.name.localeCompare(y.name, 'ko')).map(a => artistCard(a.id, true));
+    },
+    async save(p) {   // R-120~123·133·137 (admin_artist_save와 같은 검사)
+      const u = requireAdmin(); const nm = String(p.name || '').trim(); const dis = String(p.disambig || '').trim(); const kind = p.kind === 'solo' ? 'solo' : 'group'; const ig = String(p.instagram || '').trim();
+      if (nm.length < 1 || nm.length > 40) fail('validation', '아티스트 이름을 1~40자로 입력해 주세요.');
+      if (ig && !/^[A-Za-z0-9._]{1,30}$/.test(ig)) fail('validation', '인스타그램은 계정 아이디만 넣어 주세요 (영문·숫자·.·_).');
+      const same = db.artists.filter(a => a.id !== p.id && nameKey(a.name) === nameKey(nm));
+      if (same.some(a => (a.disambig || '') === dis)) fail('conflict', '같은 이름과 구분 문구의 아티스트가 이미 있어요.');
+      if (!dis && same.length) fail('validation', '같은 이름의 아티스트가 있어요. 구분 문구를 적어 주세요 (예: 밴드 · 부산).');
+      let a = p.id && db.artists.find(x => x.id === p.id);
+      if (p.id && !a) fail('not_found', '아티스트를 찾지 못했어요.');
+      if (!a) { a = { id: uid(), source: p.source || 'manual', reportId: p.reportId || null, status: 'active', aliases: [], createdAt: now(), createdBy: u.id }; db.artists.push(a); }
+      Object.assign(a, { name: nm, kind, disambig: dis, instagram: ig, photoUrl: p.photoUrl ?? a.photoUrl ?? '', photoCredit: String(p.photoCredit ?? a.photoCredit ?? '').slice(0, 100), status: p.status || a.status, updatedAt: now(), updatedBy: u.id });
+      if (Array.isArray(p.aliases)) a.aliases = [...new Map(p.aliases.map(x => String(x).trim()).filter(x => x && nameKey(x) !== nameKey(nm)).map(x => [nameKey(x), x])).values()];
+      const ok = (id, k) => db.artists.some(x => x.id === id && x.id !== a.id && x.kind === k);
+      if (kind === 'group') {
+        db.artistMembers = db.artistMembers.filter(m => m.memberId !== a.id);
+        if (Array.isArray(p.memberIds)) db.artistMembers = [...db.artistMembers.filter(m => m.groupId !== a.id), ...[...new Set(p.memberIds)].filter(id => ok(id, 'solo')).map(id => ({ groupId: a.id, memberId: id }))];
+      } else {
+        db.artistMembers = db.artistMembers.filter(m => m.groupId !== a.id);
+        if (Array.isArray(p.groupIds)) db.artistMembers = [...db.artistMembers.filter(m => m.memberId !== a.id), ...[...new Set(p.groupIds)].filter(id => ok(id, 'group')).map(id => ({ groupId: id, memberId: a.id }))];
+      }
+      const link = (rows, ids) => (ids || []).forEach(id => { const r = rows.find(x => x.id === id); if (!r) return; r.links = (r.links || []).filter(l => l.artistId !== a.id); r.links.push({ artistId: a.id, name: nm, source: 'admin' }); });
+      link(db.performances, p.linkPerfIds); link(db.openings, p.linkOpeningIds);
+      linkInterests(a.id); audit(p.id ? 'update' : 'create', 'artists', a.id, p); save();
+      return artistCard(a.id, true);
+    },
+    async merge(alias, intoId, perfIds = [], openingIds = []) {   // R-138
+      requireAdmin(); const a = db.artists.find(x => x.id === intoId); if (!a) fail('not_found', '아티스트를 찾지 못했어요.');
+      const al = String(alias || '').trim(); if (!al || al.length > 40) fail('validation', '합칠 이름을 확인해 주세요.');
+      if (nameKey(al) !== nameKey(a.name) && !(a.aliases || []).some(x => nameKey(x) === nameKey(al))) a.aliases = [...(a.aliases || []), al];
+      const link = (rows, ids) => ids.forEach(id => { const r = rows.find(x => x.id === id); if (!r) return; r.links = (r.links || []).filter(l => l.artistId !== a.id); r.links.push({ artistId: a.id, name: al, source: 'admin' }); });
+      link(db.performances, perfIds); link(db.openings, openingIds);
+      a.updatedAt = now(); linkInterests(a.id); audit('merge', 'artists', a.id, { alias: al, perfIds, openingIds }); save();
+      return artistCard(a.id, true);
+    },
+    async hide(id, hidden = true) { requireAdmin(); const a = db.artists.find(x => x.id === id); if (!a) fail('not_found', '아티스트를 찾지 못했어요.'); a.status = hidden ? 'hidden' : 'active'; a.updatedAt = now(); audit('hide', 'artists', id); save(); return artistCard(id, true); },
+    async candidates(q = '', status = 'pending') {   // R-124
+      requireAdmin(); const k = nameKey(q); const reg = new Set(db.artists.flatMap(a => [a.name, ...(a.aliases || [])]).map(nameKey));
+      const m = new Map();
+      db.performances.filter(p => !p.hidden).forEach(p => (p.artists || []).forEach(n => {
+        const nk = nameKey(n); if (!nk || reg.has(nk)) return;
+        const c = m.get(nk) || { nameKey: nk, name: n, perfCount: 0, sample: p.title, lastDate: p.startDate, ids: new Set() };
+        if (!c.ids.has(p.id)) { c.ids.add(p.id); c.perfCount++; } if (p.startDate > c.lastDate) { c.lastDate = p.startDate; c.sample = p.title; c.name = n; }
+        m.set(nk, c);
+      }));
+      const ign = new Set(db.ignoredNames || []);
+      return [...m.values()].filter(c => ign.has(c.nameKey) === (status === 'ignored') && (!k || c.nameKey.includes(k)))
+        .sort((x, y) => y.perfCount - x.perfCount || x.name.localeCompare(y.name, 'ko')).slice(0, 500)
+        .map(({ ids, ...c }) => ({ ...c, similar: activeArtists().filter(a => { const ak = nameKey(a.name); return c.nameKey.length >= 2 && ak.length >= 2 && (ak.includes(c.nameKey) || c.nameKey.includes(ak)); }).map(a => ({ id: a.id, name: a.name, disambig: a.disambig || '' })) }));
+    },
+    async ignore(name, on = true) { requireAdmin(); const k = nameKey(name); db.ignoredNames = (db.ignoredNames || []).filter(x => x !== k); if (on) db.ignoredNames.push(k); save(); },
+    async uploadPhoto(file) {
+      requireAdmin(); if (!/^image\/(jpeg|png|webp)$/.test(file.type)) fail('validation', 'JPG·PNG·WEBP 이미지만 올릴 수 있어요.'); if (file.size > 2 * 1024 * 1024) fail('validation', '2MB 이하 이미지만 올릴 수 있어요.');
+      return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => rej(new ApiError('server', '이미지를 읽지 못했어요.')); fr.readAsDataURL(file); });
+    }
+  },
+  async saveLinks(kind, id, links) {   // R-139
+    requireAdmin(); const rows = kind === 'performance' ? db.performances : kind === 'opening' ? db.openings : null; if (!rows) fail('validation', '연결 종류가 올바르지 않아요.');
+    const r = rows.find(x => x.id === id); if (!r) fail('not_found', '찾지 못했어요.');
+    const seen = new Set(); r.links = (links || []).filter(l => l.artistId && db.artists.some(a => a.id === l.artistId) && !seen.has(l.artistId) && seen.add(l.artistId)).map(l => ({ artistId: l.artistId, name: l.name || '', source: 'admin' }));
+    audit('link_artists', kind, id, links); save();
   },
   kopis: {
     async runs() { requireAdmin(); return copy(db.kopisRuns.slice(0, 7)); },
@@ -377,5 +532,5 @@ const admin = {
 
 export function createLocalBackend() {
   load();   // 스냅샷 없이 먼저 준비 (init에서 개발 모드면 스냅샷 반영)
-  return { backend: 'local', isDemo: true, adminEmailHint: ADMIN_EMAIL, async init() { await loadSnapshot(); if (snapshot && !db.performances.some(p => p.source === 'kopis')) { const keep = { users: db.users, data: db.data, reports: db.reports, reportLogs: db.reportLogs, audit: db.audit, logs: db.logs }; db = Object.assign(seedDb(), keep); save(); } return current(); }, auth, content, records, interests, badges, reports, logs, admin, resetDemo() { localStorage.removeItem(DB_KEY); localStorage.removeItem(SESSION_KEY); load(); emit(); } };
+  return { backend: 'local', isDemo: true, adminEmailHint: ADMIN_EMAIL, async init() { await loadSnapshot(); if (snapshot && !db.performances.some(p => p.source === 'kopis')) { const keep = { users: db.users, data: db.data, reports: db.reports, reportLogs: db.reportLogs, audit: db.audit, logs: db.logs }; db = Object.assign(seedDb(), keep); save(); } return current(); }, auth, content, records, interests, artists, badges, reports, logs, admin, resetDemo() { localStorage.removeItem(DB_KEY); localStorage.removeItem(SESSION_KEY); load(); emit(); } };
 }

@@ -2,7 +2,8 @@
 import api from '../../shared/api/index.js';
 import { L } from '../../shared/lib.js';
 import { CONFIG } from '../../shared/config.js';
-import { REGIONS } from '../../shared/domain.js';
+import { REGIONS, nameKey } from '../../shared/domain.js';
+import { artistCard, pendingCard, searchArtists, reportArtistCta } from './artists.js';
 import { esc, page, $, $$, sheet, closeSheet, toast, track, medal, inApp } from '../ui.js';
 import { S, today, badgeRecords } from '../state.js';
 
@@ -49,10 +50,11 @@ export function renderMy(tab) {
   if (!api.auth.current()) { renderGuest(); return; }
   if (tab) S.myTab = tab;
   const t = S.myTab; let list;
-  if (t === 'artists') {
-    list = (S.interests.length ? `<div class="chips">${S.interests.map(x => `<button type="button" class="chip on" data-act="interest" data-name="${esc(x.name)}" data-from="my">♥ ${esc(x.name)}</button>`).join('')}</div><p class="op-note">누르면 관심 아티스트에서 빠져요.</p>`
-      : '<div class="empty">관심 아티스트가 없어요. 공연 일정에서 아티스트 이름을 눌러 담아 보세요.</div>')
-      + '<form class="inline-form" id="artistForm"><input type="text" name="name" maxlength="40" placeholder="아티스트 이름 직접 추가" aria-label="아티스트 이름"><button class="btn small" type="submit">추가</button></form>';
+  if (t === 'artists') {   // R-126·129: 검색해서 담기 (이름 직접 추가 없앰)
+    list = `<label class="ar-searchbox"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="artistQ" type="search" placeholder="아티스트 이름으로 찾기" value="${esc(MA.q)}" aria-label="아티스트 검색" autocomplete="off">
+      <button type="button" class="ar-clear" data-act="my-artist-clear" aria-label="검색어 지우기"${MA.q ? '' : ' hidden'}>×</button></label>
+      <div id="myArtistList"><p class="loading small">불러오는 중…</p></div>`;
   } else {
     const items = S.records.filter(r => r.type === t).sort((a, b) => (t === 'planned' ? (a.date || '9').localeCompare(b.date || '9') : (b.date || '').localeCompare(a.date || '')));
     list = items.length ? `<div class="rec-list">${items.map(recordRow).join('')}</div>` : `<div class="empty">${t === 'planned' ? '오픈 공지나 공연 일정에서 ♡를 눌러 담아 보세요.' : '공연 일정에서 ‘관람했어요’를 누르거나 직접 기록해 보세요.'}</div>`;
@@ -68,6 +70,34 @@ export function renderMy(tab) {
       <button class="btn primary block" type="submit">기록하기</button></form></details>` : ''}
     <p class="settings-link"><a class="link" href="#/settings">설정</a></p>`, { keepScroll: S.keepScroll });
   S.keepScroll = false;
+  if (t === 'artists') {
+    $('#artistQ').addEventListener('input', e => { MA.q = e.target.value; $('.ar-clear').hidden = !MA.q; drawMyArtists(); });
+    drawMyArtists();
+  }
+}
+
+/* 나의 내내 › 관심 아티스트 (MY-03): 검색어 없음 = 내 관심 아티스트, 있음 = 검색 결과 */
+const MA = { q: '' };
+async function drawMyArtists() {
+  const box = $('#myArtistList'); if (!box) return;
+  if (nameKey(MA.q)) {
+    searchArtists(MA.q, (list, asked) => {
+      if (asked !== MA.q || !$('#myArtistList')) return;
+      box.innerHTML = list.length ? `<h2 class="res-head">검색 결과 <span class="count">${list.length}</span></h2><div class="ar-list">${list.map(c => artistCard(c, { from: 'my' })).join('')}</div>${reportArtistCta(MA.q)}`
+        : `<div class="empty ar-empty"><b>‘${esc(MA.q)}’와 맞는 아티스트가 없어요</b><span>띄어쓰기나 영문 이름으로도 찾아보세요.<br>그래도 없으면 제보해 주세요.</span>
+          <a class="btn primary small" href="#/report/artist" data-act="report-artist" data-name="${esc(MA.q)}">아티스트 제보하기</a></div>`;
+    });
+    return;
+  }
+  if (!S.interests.length) { box.innerHTML = '<div class="empty">관심 아티스트가 없어요. 위에서 아티스트를 찾아 ♡를 눌러 담아 보세요.</div>'; return; }
+  let cards = []; try { cards = await api.artists.cards(S.interests.filter(i => i.artistId).map(i => i.artistId)); } catch { cards = []; }
+  if (!$('#myArtistList') || nameKey(MA.q)) return;
+  const byId = new Map(cards.map(c => [c.id, c]));
+  const rows = S.interests.map(i => (i.artistId ? (byId.has(i.artistId) ? artistCard(byId.get(i.artistId), { mine: true, from: 'my' }) : '') : pendingCard(i))).filter(Boolean);
+  box.innerHTML = `<div class="res-row"><h2 class="res-head">내 관심 아티스트 <span class="count">${rows.length}</span></h2><small class="muted">최근 담은 순</small></div><div class="ar-list">${rows.join('')}</div>`;
+}
+export function myArtistsAction(act) {
+  if (act === 'my-artist-clear') { MA.q = ''; const i = $('#artistQ'); if (i) { i.value = ''; i.focus(); } const c = $('.ar-clear'); if (c) c.hidden = true; drawMyArtists(); }
 }
 /* SHT-05 기록 수정 (R-36: KOPIS 공연은 날짜만) */
 export function editSheet(r) {

@@ -3,14 +3,16 @@ import '../shared/style.css';
 import api from '../shared/api/index.js';
 import { L } from '../shared/lib.js';
 import { $, sheet, closeSheet, toast, track, store, errMsg, app } from './ui.js';
-import { S, loadContent, loadMine, visibleOpenings, perfById, checkNewBadge, notifyError, today } from './state.js';
+import { S, loadContent, loadMine, visibleOpenings, perfById, checkNewBadge, notifyError, today, interestByName } from './state.js';
 import { renderOpen, calendarSheet, downloadICS, plannedForOpening } from './views/open.js';
 import { renderSchedule, renderPerf } from './views/schedule.js';
 import { renderReco, hexSheet } from './views/reco.js';
 import { renderEvents, renderEventDetail } from './views/events.js';
 import { renderMy, renderBadgeGuide, renderStamp, stampAction, editSheet } from './views/my.js';
 import { renderLogin, renderSignup, renderSocialProfile, renderSettings, renderTerms, loginSheet, requireLogin, takePending, submitAuth, submitProfile, passwordResetSheet, nicknameSheet, withdrawSheet } from './views/account.js';
-import { renderReport, renderMyReports, submitReport, reportAction, cancelReport } from './views/report.js';
+import { renderReport, renderMyReports, submitReport, reportAction, cancelReport, setArtistPrefill, reportFormAction } from './views/report.js';
+import { drawScheduleArtists } from './views/artists.js';
+import { myArtistsAction } from './views/my.js';
 
 /* ---------- 라우팅 ---------- */
 let current = '';
@@ -31,7 +33,7 @@ async function route(keep) {
     case 'my': renderMy(['planned', 'attended', 'artists'].includes(id) ? id : null); break;
     case 'badges': renderBadgeGuide(); break;
     case 'stamp': api.auth.current() ? renderStamp(id) : renderMy(); break;
-    case 'report': id === 'mine' ? await renderMyReports() : renderReport(); break;
+    case 'report': id === 'mine' ? await renderMyReports() : renderReport(id); break;
     case 'login': renderLogin(); break;
     case 'signup': id === 'social' ? renderSocialProfile() : renderSignup(); break;
     case 'settings': renderSettings(); break;
@@ -44,7 +46,7 @@ async function route(keep) {
 addEventListener('hashchange', () => route(false));
 
 /* ---------- 로그인이 필요한 행동 (R-02·03) ---------- */
-const GATED = ['plan-opening', 'plan-perf', 'attend-perf', 'interest', 'report-open'];
+const GATED = ['plan-opening', 'plan-perf', 'attend-perf', 'interest', 'interest-artist', 'report-open', 'report-artist'];
 async function doAction(act, d, resumed) {
   try {
     if (act === 'plan-opening' || act === 'plan-perf') {
@@ -61,11 +63,19 @@ async function doAction(act, d, resumed) {
       const r = await api.records.attend({ performanceId: d.id, date: d.date });
       S.records = S.records.filter(x => x.id !== r.removedPlannedId); S.records.push(r.record);
       track('attended_add', { item: d.id, value: 'perf' }); toast('관람 기록을 남겼어요. 인증샷도 만들어 보세요!');   // R-33: 따로 안내 안 함
-    } else if (act === 'interest') {
-      const on = S.interests.some(i => i.name.normalize('NFKC').toLowerCase().replace(/\s/g, '') === String(d.name).normalize('NFKC').toLowerCase().replace(/\s/g, ''));
-      if (on) { if (resumed) { toast('이미 관심 아티스트예요.'); return; } await api.interests.remove(d.name); S.interests = await api.interests.list(); track('artist_uninterest', { item: d.name, value: d.from }); toast(`${d.name} 관심 해제`); }
-      else { await api.interests.add(d.name, d.from === 'perf' ? 'perf' : 'manual'); S.interests = await api.interests.list(); track('artist_interest', { item: d.name, value: d.from }); toast(`${d.name}을(를) 관심 아티스트에 담았어요.`); }
+    } else if (act === 'interest' || act === 'interest-artist') {   // R-129: 아티스트가 있으면 ID로, 없으면 이름으로
+      const hit = act === 'interest-artist' ? S.interests.find(i => i.artistId === d.id) : interestByName(d.name);
+      if (hit) {
+        if (resumed) { toast('이미 관심 아티스트예요.'); return; }
+        await api.interests.remove(hit.artistId ? { artistId: hit.artistId } : { name: hit.name }); S.interests = await api.interests.list();
+        track('artist_uninterest', { item: d.name, value: d.from }); toast(`${d.name} 관심 해제`);
+      } else {
+        const ref = act === 'interest-artist' ? { artistId: d.id, name: d.name } : { name: d.name };
+        await api.interests.add(ref, d.from === 'perf' ? 'perf' : act === 'interest-artist' ? 'search' : 'manual'); S.interests = await api.interests.list();
+        track('artist_interest', { item: d.name, value: d.from }); toast(`${d.name}을(를) 관심 아티스트에 담았어요.`);
+      }
     } else if (act === 'report-open') { track('report_open', { value: d.from }); location.hash = '#/report'; return; }
+    else if (act === 'report-artist') { track('report_open', { value: 'artist' }); setArtistPrefill(d.name || ''); if (location.hash === '#/report/artist') rerender(); else location.hash = '#/report/artist'; return; }
     await checkNewBadge();
   } catch (e) { notifyError(e); }
   rerender();
@@ -131,6 +141,10 @@ document.addEventListener('click', async e => {
       case 'demo-reset': if (api.resetDemo) { api.resetDemo(); await loadContent(); await loadMine(); toast('시연 데이터를 처음으로 돌렸어요.'); location.hash = '#/open'; } break;
       case 'report-reason': case 'report-detail': case 'report-retry': closeSheet(); reportAction(act, id); break;
       case 'report-cancel': cancelReport(id); break;
+      case 'artist-schedule': S.sched.q = a.dataset.name || ''; S.sched.past = false; track('artist_schedule', { item: S.sched.q }); if (location.hash.startsWith('#/schedule')) route(true); else location.hash = '#/schedule'; break;
+      case 'artist-more': { const box = $('#artistSec'); if (box) { box.dataset.more = '1'; drawScheduleArtists(S.sched.q); } break; }
+      case 'artist-jump': $('#artistSec')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); break;
+      case 'my-artist-clear': case 'report-member-add': case 'report-kind': case 'report-artist-kind': case 'report-group-pick': case 'report-chip-remove': if (act === 'my-artist-clear') myArtistsAction(act, a); else reportFormAction(act, a); break;
     }
   } catch (er) { notifyError(er); }
 });
@@ -138,7 +152,7 @@ document.addEventListener('click', async e => {
 /* ---------- 폼 ---------- */
 document.addEventListener('submit', async e => {
   const f = e.target; const id = f.id;
-  if (!['manualForm', 'loginForm', 'signupForm', 'profileForm', 'reportForm', 'artistForm', 'editForm', 'nickForm', 'resetForm'].includes(id)) return;
+  if (!['manualForm', 'loginForm', 'signupForm', 'profileForm', 'reportForm', 'editForm', 'nickForm', 'resetForm'].includes(id)) return;
   e.preventDefault();
   try {
     if (id === 'loginForm' || id === 'signupForm') { const how = await submitAuth(id === 'signupForm' ? 'signup' : 'login', f); if (how) afterLogin(how); }
@@ -148,9 +162,6 @@ document.addEventListener('submit', async e => {
       const d = new FormData(f);
       const rec = await api.records.createManual({ type: d.get('type'), title: String(d.get('title') || '').trim(), date: d.get('date'), venue: String(d.get('venue') || '').trim(), region: d.get('region') || '', artists: String(d.get('artists') || '').split(/[,·/]/).map(s => s.trim()).filter(Boolean) });
       S.records.push(rec); track('attended_add', { item: 'manual', value: 'manual' }); toast('기록했어요.'); S.myTab = rec.type; await checkNewBadge(); renderMy();
-    } else if (id === 'artistForm') {
-      const n = String(new FormData(f).get('name') || '').trim(); if (!n) return;
-      await api.interests.add(n, 'manual'); S.interests = await api.interests.list(); track('artist_interest', { item: n, value: 'manual' }); toast(`${n}을(를) 관심 아티스트에 담았어요.`); await checkNewBadge(); renderMy('artists');
     } else if (id === 'editForm') {
       const d = new FormData(f); const patch = { date: d.get('date') };
       if (d.has('venue')) Object.assign(patch, { venue: String(d.get('venue') || '').trim(), region: d.get('region') || '', artists: String(d.get('artists') || '').split(/[,·/]/).map(s => s.trim()).filter(Boolean) });
