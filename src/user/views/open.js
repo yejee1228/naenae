@@ -57,7 +57,7 @@ export function renderOpen() {
     : mode === 'cal' ? calendarView(list) : `<div class="op-list">${list.map(o => openingCard(o, 'list')).join('')}</div>`;
   page('open', `<section class="hero-brand"><img class="hero-logo" src="assets/logo.png" alt="${esc(CONFIG.serviceName)} ${esc(CONFIG.serviceNameEn)}" width="240" height="169">
     <p class="slogan-ko">${esc(CONFIG.sloganKo)}</p><p class="slogan-en">${esc(CONFIG.sloganEn)}</p>
-    <p class="lede">놓치기 쉬운 공연 티켓 오픈, 내 캘린더에 넣어 두면 알림으로 알려 드려요.</p></section>
+    <p class="lede">좋은 기억을 내내 간직하는 라이브 다이어리</p></section>
     ${mySection(list)}
     <div class="sec-head"><h2>티켓 오픈 공지 <span class="count">${list.length}</span></h2>
       <div class="seg wide" role="group" aria-label="보기 방식"><button type="button" data-act="open-mode" data-v="list" aria-pressed="${mode === 'list'}">리스트</button><button type="button" data-act="open-mode" data-v="cal" aria-pressed="${mode === 'cal'}">캘린더</button></div></div>
