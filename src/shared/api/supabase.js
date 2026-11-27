@@ -35,7 +35,13 @@ export function createSupabaseBackend(cfg) {
     }
     emit();
   }
-  sb.auth.onAuthStateChange((_e, session) => { refresh(session); });
+  // 다른 앱에 갔다 돌아오면 supabase가 로그인을 다시 확인하며 SIGNED_IN·TOKEN_REFRESHED를 보냄.
+  // 같은 사람이면 화면을 다시 그리지 않음 (다시 그리면 쓰던 제보·기록 내용이 지워짐)
+  sb.auth.onAuthStateChange((event, session) => {
+    const id = session?.user?.id || null;
+    if (id && authUser && id === authUser.id && event !== 'USER_UPDATED') { authUser = session.user; return; }
+    refresh(session);
+  });
 
   const auth = {
     current, pendingProfile: () => pending,

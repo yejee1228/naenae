@@ -36,12 +36,14 @@ function artistForm() {
     <p class="ferr" id="reportErr" role="alert"></p><button class="btn primary block" type="submit">제보 보내기</button>`;
 }
 function eventForm(p) {
-  return `${kindSelect(p.kind === 'performance' ? 'performance' : 'opening')}
+  const opening = p.kind !== 'performance'; const [od = '', ot = ''] = String(p.openAtText || '').split(/[ T]/);
+  return `${kindSelect(opening ? 'opening' : 'performance')}
       <label>공연명 *<input type="text" name="title" required maxlength="80" value="${esc(p.title || '')}"></label>
       <label>아티스트 <small>쉼표로 구분</small><input type="text" name="artists" maxlength="100" value="${esc((p.artists || []).join(', '))}"></label>
       <label>공연장<input type="text" name="venue" maxlength="40" value="${esc(p.venue || '')}"></label>
-      <label>공연 날짜<input type="date" name="showDate" value="${esc(p.showDate || '')}"></label>
-      <label>티켓 오픈 일시<input type="datetime-local" name="openAt" value="${esc((p.openAtText || '').replace(' ', 'T'))}"></label>
+      <label>공연 날짜 *<input type="date" name="showDate" required min="2000-01-01" max="2099-12-31" value="${esc(p.showDate || '')}"></label>
+      <div class="open-row"><label><span>티켓 오픈 날짜<span class="req-open">${opening ? ' *' : ''}</span></span><input type="date" name="openDate" min="2000-01-01" max="2099-12-31" value="${esc(od)}"></label>
+        <label>오픈 시간 <small>선택</small><input type="time" name="openTime" value="${esc(ot.slice(0, 5))}"></label></div>
       <label>예매 링크<input type="url" name="ticketUrl" inputmode="url" placeholder="https://" value="${esc(p.ticketUrl || '')}"></label>
       <label>출처 링크 <small>공지 게시물 · 인스타그램 등</small><input type="url" name="sourceUrl" inputmode="url" placeholder="https://" value="${esc(p.sourceUrl || '')}"></label>
       <label>메모<textarea name="note" maxlength="300" rows="3">${esc(p.note || '')}</textarea></label>
@@ -60,7 +62,11 @@ export function renderReport(id) {
     <form class="form report-form" id="reportForm" autocomplete="off" novalidate data-kind="${artist ? 'artist' : 'event'}">${artist ? artistForm() : eventForm({ ...p, kind: AR.kind })}
       <p class="hint">제보한 내용은 확인 과정에서 다듬어져 올라갈 수 있습니다.</p></form>`, { back: artist ? '#/my/artists' : '#/open' });
   const f = $('#reportForm');
-  f.elements.kind.addEventListener('change', e => { captureAR(); AR.kind = e.target.value; renderReport(AR.kind === 'artist' ? 'artist' : ''); });
+  f.elements.kind.addEventListener('change', e => {
+    const k = e.target.value; const was = AR.kind; captureAR(); AR.kind = k;
+    if (k !== 'artist' && was !== 'artist') { const r = $('.req-open'); if (r) r.textContent = k === 'opening' ? ' *' : ''; return; }
+    renderReport(k === 'artist' ? 'artist' : '');
+  });
   if (artist && $('#pickQ')) { $('#pickQ').addEventListener('input', e => drawPicks(e.target.value)); }
   if (artist) f.addEventListener('change', e => { if (e.target.dataset.memberId) toggleMember(e.target); });
   api.reports.listMine().then(r => { mine = r; }).catch(() => {});
@@ -111,7 +117,7 @@ export async function submitReport(form) {
     const msg = !input.title ? '아티스트 이름을 입력해 주세요.' : !/^https?:\/\/\S+$/.test(input.sourceUrl) ? '인스타그램 또는 참고 링크를 https:// 주소로 알려 주세요.' : '';
     $('#reportErr').textContent = msg; if (msg) return;
   } else {
-    input = { kind: v('kind'), title: v('title'), artists: v('artists').split(/[,·/]/).map(s => s.trim()).filter(Boolean), venue: v('venue'), showDate: v('showDate'), openAtText: v('openAt').replace('T', ' '), ticketUrl: v('ticketUrl'), sourceUrl: v('sourceUrl'), note: v('note') };
+    input = { kind: v('kind'), title: v('title'), artists: v('artists').split(/[,·/]/).map(s => s.trim()).filter(Boolean), venue: v('venue'), showDate: v('showDate'), openAtText: v('openDate') ? (v('openDate') + (v('openTime') ? ' ' + v('openTime') : '')) : '', ticketUrl: v('ticketUrl'), sourceUrl: v('sourceUrl'), note: v('note') };
     const msg = validateReport(input); $('#reportErr').textContent = msg; if (msg) return;
   }
   try {

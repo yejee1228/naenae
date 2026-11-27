@@ -151,9 +151,11 @@ assert.equal(hx.values.travel, 50); assert.equal(hx.values.regular, 25); assert.
 assert.equal(D.hexagon([], []).empty, true); assert.equal(D.hexSummary(D.hexagon([], []), 'x'), '');
 // 제보 검사
 assert.equal(D.validateReport({}), '공연명을 입력해 주세요.');
-assert.equal(D.validateReport({ title: 'x' }), '공연 날짜, 오픈 일시, 링크 중 하나는 알려 주세요.');
-assert.equal(D.validateReport({ title: 'x', ticketUrl: 'javascript:alert(1)' }), '링크는 https:// 로 시작하는 주소로 넣어 주세요.');
-assert.equal(D.validateReport({ title: 'x', showDate: '2026-12-01' }), '');
+assert.equal(D.validateReport({ title: 'x' }), '공연 날짜를 입력해 주세요.');   // 공연명·공연 날짜 필수 (11/28)
+assert.equal(D.validateReport({ title: 'x', showDate: '2026-12-01' }), '티켓 오픈 날짜를 입력해 주세요.');   // 오픈 공지(기본)는 오픈 날짜 필수
+assert.equal(D.validateReport({ kind: 'opening', title: 'x', showDate: '2026-12-01', openAtText: '2026-11-30' }), '');   // 시간은 선택
+assert.equal(D.validateReport({ kind: 'performance', title: 'x', showDate: '2026-12-01', ticketUrl: 'javascript:alert(1)' }), '링크는 https:// 로 시작하는 주소로 넣어 주세요.');
+assert.equal(D.validateReport({ kind: 'performance', title: 'x', showDate: '2026-12-01' }), '');
 // KOPIS 응답 정리
 const listXml = '<dbs><db><mt20id>PF1</mt20id><prfnm><![CDATA[A &amp; B 공연]]></prfnm><prfpdfrom>2026.12.01</prfpdfrom><prfpdto>2026.12.02</prfpdto><fcltynm>롤링홀</fcltynm><area>서울특별시</area><prfstate>공연예정</prfstate><poster>http://x/p.gif</poster></db><db><mt20id></mt20id></db></dbs>';
 const li = D.parseKopisList(listXml);

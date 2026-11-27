@@ -64,11 +64,13 @@ export function renderMy(tab) {
     <div class="tabs" role="tablist">${[['planned', '보고 싶은 공연'], ['attended', '관람 완료'], ['artists', '관심 아티스트']].map(([k, n]) => `<a role="tab" href="#/my/${k}" aria-selected="${t === k}" class="${t === k ? 'on' : ''}">${n}</a>`).join('')}</div>
     ${list}
     ${t !== 'artists' ? `<details class="manual"><summary>목록에 없는 공연 직접 기록</summary><form class="form" id="manualForm" autocomplete="off">
-      <label>공연명 *<input type="text" name="title" required maxlength="80"></label><label>날짜 *<input type="date" name="date" required value="${today()}"></label>
+      <label>공연명 *<input type="text" name="title" required maxlength="80"></label><label>날짜 *<input type="date" name="date" required min="2000-01-01" max="2099-12-31" value="${today()}"></label>
       <label>공연장<input type="text" name="venue" maxlength="40"></label><label>지역<select name="region"><option value="">선택 안 함</option>${REGIONS.map(r => `<option>${r}</option>`).join('')}</select></label>
       <label>아티스트 (쉼표로 구분)<input type="text" name="artists" maxlength="100"></label>
       <label>상태<select name="type"><option value="attended"${t === 'attended' ? ' selected' : ''}>관람 완료</option><option value="planned"${t === 'planned' ? ' selected' : ''}>보고 싶은 공연</option></select></label>
-      <button class="btn primary block" type="submit">기록하기</button></form></details>` : ''}
+      <label class="check-line"><input type="checkbox" name="report" checked><span>이 공연을 내내에 제보하기<small>운영자가 확인한 뒤 공연 일정에 올립니다</small></span></label>
+      <button class="btn primary block" type="submit">기록하기</button>
+      <p class="small muted" style="margin:0">티켓 오픈 소식이나 찾는 아티스트가 없으면 <a class="link" href="#/report" data-act="report-open" data-v="my">제보하기</a>에서 알려 주세요.</p></form></details>` : ''}
     <p class="settings-link"><a class="link" href="#/settings">설정</a></p>`, { keepScroll: S.keepScroll });
   S.keepScroll = false;
   if (t === 'artists') {
@@ -106,7 +108,7 @@ export function editSheet(r) {
   const p = kopis ? S.perfs.find(x => x.id === r.performanceId) : null;
   sheet(`<h2>기록 수정</h2><form class="form" id="editForm" data-id="${esc(r.id)}">
     <p class="small muted">${esc(r.title)}</p>
-    <label>날짜<input type="date" name="date" value="${esc(r.date || '')}"${p ? ` min="${p.startDate}" max="${p.endDate < today() || r.type === 'planned' ? p.endDate : today()}"` : ''}></label>
+    <label>날짜<input type="date" name="date" value="${esc(r.date || '')}"${p ? ` min="${p.startDate}" max="${p.endDate < today() || r.type === 'planned' ? p.endDate : today()}"` : ' min="2000-01-01" max="2099-12-31"'}></label>
     ${kopis ? '<p class="op-note">공연 일정에서 담은 기록은 날짜만 고칠 수 있습니다.</p>' : `<label>공연장<input type="text" name="venue" maxlength="40" value="${esc(r.venue || '')}"></label>
       <label>지역<select name="region"><option value="">선택 안 함</option>${REGIONS.map(x => `<option${r.region === x ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
       <label>아티스트 (쉼표로 구분)<input type="text" name="artists" maxlength="100" value="${esc((r.artists || []).join(', '))}"></label>`}

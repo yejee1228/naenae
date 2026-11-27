@@ -165,7 +165,7 @@ export function renderSettings() {
       <a class="set-row" href="#/terms/tos"><b>이용약관</b><i aria-hidden="true">›</i></a>
       <a class="set-row" href="#/terms/privacy"><b>개인정보 처리방침</b><i aria-hidden="true">›</i></a>
       <a class="set-row" href="#/badges"><b>배지 가이드</b><i aria-hidden="true">›</i></a>
-      ${u.isAdmin ? '<a class="set-row" href="admin.html"><b>관리자 페이지</b><i aria-hidden="true">›</i></a>' : ''}
+      ${u.isAdmin ? '<a class="set-row" href="admin"><b>관리자 페이지</b><i aria-hidden="true">›</i></a>' : ''}
     </section>
     <button class="btn ghost block" type="button" data-act="logout">로그아웃</button>
     ${u.isAdmin ? '' : '<p class="auth-links"><button type="button" class="link danger" data-act="withdraw">회원 탈퇴</button></p>'}

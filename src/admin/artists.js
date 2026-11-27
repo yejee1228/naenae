@@ -51,23 +51,25 @@ export function drawArtistList() {
     : `<p class="adm-empty">${A.all?.length ? '맞는 아티스트가 없어요.' : '아직 등록된 아티스트가 없어요. 후보 검수에서 확인한 아티스트부터 등록해 주세요.'}</p>`}`;
 }
 
-/* 후보 검수 (R-124) */
+/* 후보 검수 (R-124): KOPIS 공연명에서 자동으로 뽑은 이름(사용자 제보 아님)을 운영자가 확인
+   검수 = 등록 화면으로 · 합치기 = 다른 표기로 · 제외 = 누른 상태로 목록 맨 아래 (다시 누르면 되살림) · 줄을 누르면 확인·수정 창 */
 async function renderCandidates() {
-  ui.main().innerHTML = ui.head('아티스트', '공연명에서 뽑은 이름 중 아직 등록되지 않은 이름이에요. 확인한 아티스트만 승인해 주세요.', '<a class="btn primary small" href="#/artists/edit/new">+ 아티스트 등록</a>')
+  ui.main().innerHTML = ui.head('아티스트', 'KOPIS 공연명에서 자동으로 뽑은 이름 중 아직 등록되지 않은 이름이에요. 확인한 아티스트만 검수해 주세요.', '<a class="btn primary small" href="#/artists/edit/new">+ 아티스트 등록</a>')
     + tabs('candidates', upcoming().filter(p => unlinked(p).length).length)
-    + `<div class="adm-tools"><input type="search" data-asearch="cand" placeholder="이름 검색" value="${esc(A.cq)}" aria-label="후보 검색"><div class="adm-chips"><button type="button" class="chip${A.ignored ? ' on' : ''}" data-act="ar-ignored" aria-pressed="${A.ignored}">제외한 이름 보기</button></div></div><div id="candList"><p class="loading">불러오는 중…</p></div>`;
-  A.cands = await api.admin.artists.candidates('', A.ignored ? 'ignored' : 'pending');
+    + `<div class="adm-tools"><input type="search" data-asearch="cand" placeholder="이름 검색" value="${esc(A.cq)}" aria-label="후보 검색"></div><div id="candList"><p class="loading">불러오는 중…</p></div>`;
+  const [pending, ignored] = await Promise.all([api.admin.artists.candidates('', 'pending'), api.admin.artists.candidates('', 'ignored')]);
+  A.cands = [...pending, ...ignored.map(c => ({ ...c, ignored: true }))];   // 제외한 이름은 맨 아래
   drawCandidates();
 }
 export function drawCandidates() {
   const k = nameKey(A.cq); const rows = A.cands.filter(c => !k || c.nameKey.includes(k));
+  const show = [...rows.filter(c => !c.ignored).slice(0, 200), ...rows.filter(c => c.ignored)];
   const cols = '--cols: minmax(0,1.3fr) 64px minmax(0,2fr) minmax(0,1.4fr) 200px';
-  $('#candList').innerHTML = `<p class="small muted" style="margin:0 0 8px">${rows.length}개</p><div class="adm-list"><div class="adm-row head" style="${cols}"><span>공연명에서 뽑은 이름</span><span>공연</span><span>예시 공연</span><span>비슷한 등록 아티스트</span><span>처리</span></div>
-    ${rows.slice(0, 200).map(c => `<div class="adm-row" style="${cols}"><span class="t">${esc(c.name)}</span><span class="sub">${c.perfCount}</span><span class="sub">${esc(c.sample || '')}</span>
+  $('#candList').innerHTML = `<p class="small muted" style="margin:0 0 8px">${rows.filter(c => !c.ignored).length}개${rows.some(c => c.ignored) ? ` · 제외 ${rows.filter(c => c.ignored).length}개 (맨 아래)` : ''}</p><div class="adm-list"><div class="adm-row head" style="${cols}"><span>공연명에서 뽑은 이름</span><span>공연</span><span>예시 공연</span><span>비슷한 등록 아티스트</span><span>처리</span></div>
+    ${show.map(c => `<div class="adm-row click${c.ignored ? ' muted-row' : ''}" style="${cols}" data-act="ar-cand-open" data-name="${esc(c.name)}" tabindex="0" role="button" aria-label="${esc(c.name)} 확인·수정"><span class="t">${esc(c.name)}</span><span class="sub">${c.perfCount}</span><span class="sub">${esc(c.sample || '')}</span>
       <span class="sub">${c.similar?.length ? c.similar.map(s => esc(s.name + (s.disambig ? ` (${s.disambig})` : ''))).join(', ') : '없음'}</span>
-      <span class="cell-actions">${A.ignored ? `<button class="btn small ghost" type="button" data-act="ar-unignore" data-name="${esc(c.name)}">되살리기</button>`
-        : `<button class="btn small primary" type="button" data-act="ar-approve" data-name="${esc(c.name)}">승인</button><button class="btn small" type="button" data-act="ar-merge" data-name="${esc(c.name)}">합치기</button><button class="btn small ghost" type="button" data-act="ar-ignore" data-name="${esc(c.name)}">제외</button>`}</span></div>`).join('') || '<p class="adm-empty">후보가 없어요.</p>'}</div>
-    <p class="small muted">승인 = 새 아티스트로 등록 · 합치기 = 이미 있는 아티스트의 다른 표기(별칭)로 · 제외 = 아티스트 이름이 아님 (다음 수집 때도 다시 안 올림)</p>`;
+      <span class="cell-actions">${c.ignored ? '' : `<button class="btn small primary" type="button" data-act="ar-approve" data-name="${esc(c.name)}" title="등록 화면에서 확인한 뒤 저장">검수</button><button class="btn small" type="button" data-act="ar-merge" data-name="${esc(c.name)}">합치기</button>`}<button class="btn small ghost${c.ignored ? ' on' : ''}" type="button" data-act="${c.ignored ? 'ar-unignore' : 'ar-ignore'}" data-name="${esc(c.name)}" aria-pressed="${!!c.ignored}" title="${c.ignored ? '다시 누르면 되살려요' : '아티스트 이름이 아니에요'}">제외</button></span></div>`).join('') || '<p class="adm-empty">후보가 없어요.</p>'}</div>
+    <p class="small muted">검수 = 등록 화면에서 유형·구분 문구·연결할 공연을 확인하고 저장 · 합치기 = 이미 있는 아티스트의 다른 표기(별칭)로 · 제외 = 아티스트 이름이 아님 (맨 아래로, 다시 누르면 되살림 · 다음 수집 때도 다시 안 올림)<br>줄을 누르면 유형·구분 문구·별칭·연결할 공연을 확인하고 고친 뒤 저장할 수 있어요.</p>`;
 }
 
 /* 공연 연결 확인 (R-125): 앞으로의 공연 중 아티스트와 연결 안 된 이름이 있는 공연 */
@@ -85,12 +87,31 @@ async function renderArtistForm(id) {
   await Promise.all([loadAll(), loadPerfs()]);
   const isNew = id === 'new'; const src = isNew ? (A.prefill || {}) : byId(id);
   if (!src) { ui.main().innerHTML = '<p class="adm-empty">아티스트를 찾지 못했어요. <a class="link" href="#/artists">목록으로</a></p>'; return; }
-  A.prefill = null;
-  A.form = { id: isNew ? null : src.id, kind: src.kind || 'group', photoUrl: src.photoUrl || '', rel: new Map(((src.kind === 'solo' ? src.groups : src.members) || []).map(x => [x.id, x.name])), checked: null };
+  A.prefill = null; A.modal = null;
+  startForm(src, isNew);
   const fr = A.fromReport;
   ui.main().innerHTML = ui.head(isNew ? '새 아티스트 등록' : '아티스트 수정', '', `<a class="link" href="${esc(A.returnTo || '#/artists')}">← ${A.returnTo ? '돌아가기' : '목록'}</a>`)
     + (fr ? `<p class="adm-note">제보 「${esc(fr.title)}」(${esc(fr.nickname || '')})에서 가져온 내용이에요. 등록하면 제보가 '등록 완료'로 바뀌어요.${fr.sourceUrl ? ` 참고 링크: <a class="link" href="${esc(fr.sourceUrl)}" target="_blank" rel="noopener noreferrer">${esc(fr.sourceUrl)} ↗</a>` : ''}${fr.note ? `<br>메모: ${esc(fr.note)}` : ''}</p>` : '')
-    + `<form class="adm-form" id="artistForm" novalidate>
+    + formHtml(src, isNew, `${!isNew ? `<button class="btn ghost small left" type="button" data-act="ar-hide" data-id="${esc(src.id)}" data-on="${src.status === 'hidden' ? '0' : '1'}">${src.status === 'hidden' ? '숨김 해제' : '숨기기'}</button>` : ''}<button class="btn primary" type="submit">${fr ? '등록하고 제보 완료' : '저장'}</button>`);
+  if (src.relIds) src.relIds.forEach(x => A.form.rel.set(x.id, x.name));
+  drawRel(); drawLinkList(); drawSameName();
+}
+const startForm = (src, isNew) => { A.form = { id: isNew ? null : src.id, kind: src.kind || 'group', photoUrl: src.photoUrl || '', rel: new Map(((src.kind === 'solo' ? src.groups : src.members) || []).map(x => [x.id, x.name])), checked: null }; };
+
+/* 후보 검수: 줄을 누르면 모달에서 확인·수정 → 저장(등록) · 합치기 · 삭제(제외) */
+async function openCandidate(name) {
+  await Promise.all([loadAll(), loadPerfs()]);
+  const c = A.cands.find(x => x.name === name) || { name };
+  A.modal = { cand: name }; startForm({ name }, true);
+  const bar = `${c.ignored ? `<button class="btn ghost small left" type="button" data-act="ar-unignore" data-name="${esc(name)}">제외 풀기</button>` : `<button class="btn ghost small left danger-btn" type="button" data-act="ar-cand-delete" data-name="${esc(name)}">삭제</button>`}<button class="btn small" type="button" data-act="ar-merge" data-name="${esc(name)}">합치기</button><button class="btn primary" type="submit">저장</button>`;
+  const m = ui.sheet(`<p class="eyebrow" style="margin:0">후보 검수 › 확인·수정</p><h2 style="margin:0">‘${esc(name)}’${c.ignored ? ' <span class="muted small">(제외한 이름)</span>' : ''}</h2>
+    <p class="small muted" style="margin:0">공연 ${c.perfCount ?? 0}건${c.sample ? ` · 예: ${esc(c.sample)}` : ''}${c.similar?.length ? ` · 비슷한 등록 아티스트: ${esc(c.similar.map(s => s.name).join(', '))}` : ''}</p>`
+    + formHtml({ name }, true, bar));
+  m.querySelector('.modal-body').classList.add('wide');
+  drawRel(); drawLinkList(); drawSameName();
+}
+function formHtml(src, isNew, bar, extra = '') {
+  return `<form class="adm-form" id="artistForm" novalidate>
     <div class="full adm-ar-photo"><span id="arPhoto">${photo({ id: src.id || src.name || 'new', name: src.name || '?', photoUrl: A.form.photoUrl })}</span>
       <div style="display:grid;gap:6px;flex:1"><label>사진 <small>JPG·PNG·WEBP, 2MB 이하 · 사용 허락을 받은 사진만 (R-133)</small><input type="file" name="photoFile" accept="image/jpeg,image/png,image/webp"></label>
         <span class="fld-err" data-err="photo"></span>${A.form.photoUrl ? '<button class="link" type="button" data-act="ar-photo-clear" style="justify-self:start">사진 빼기</button>' : ''}
@@ -103,10 +124,8 @@ async function renderArtistForm(id) {
     <div class="full" id="relSec"></div>
     <div class="full"><p class="lbl" style="margin:0 0 6px">연결할 공연 <small>이 이름이 나온 공연이에요. 체크한 공연에만 연결돼요 (R-137)</small></p>
       <input type="search" id="linkQ" value="${esc(src.name || '')}" placeholder="공연명·아티스트 이름으로 찾기" aria-label="연결할 공연 찾기"><div class="adm-linklist" id="linkList"></div></div>
-    <p class="ferr full" id="formErr" role="alert"></p>
-    <div class="bar">${!isNew ? `<button class="btn ghost small left" type="button" data-act="ar-hide" data-id="${esc(src.id)}" data-on="${src.status === 'hidden' ? '0' : '1'}">${src.status === 'hidden' ? '숨김 해제' : '숨기기'}</button>` : ''}<button class="btn primary" type="submit">${fr ? '등록하고 제보 완료' : '저장'}</button></div></form>`;
-  if (src.relIds) src.relIds.forEach(x => A.form.rel.set(x.id, x.name));
-  drawRel(); drawLinkList(); drawSameName();
+    ${extra}<p class="ferr full" id="formErr" role="alert"></p>
+    <div class="bar">${bar}</div></form>`;
 }
 export function drawSameName() {
   const f = $('#artistForm'); if (!f) return; const n = f.elements.name.value.trim();
@@ -156,6 +175,7 @@ export async function submitArtist(f) {
   try {
     if (A.fromReport && !A.form.id) { await api.admin.reports.register(A.fromReport.id, 'artist', data); A.fromReport = null; ui.toast('등록했어요. 제보를 등록 완료로 바꿨어요.'); }
     else { await api.admin.artists.save(data); ui.toast('저장했어요.'); }
+    if (A.modal) { A.modal = null; ui.closeSheet(); resetArtistCache(); await renderCandidates(); return; }
     const back = A.returnTo || '#/artists'; A.returnTo = ''; resetArtistCache(); location.hash = back;
   } catch (e) { $('#formErr').textContent = ui.errMsg(e); }
 }
@@ -195,7 +215,7 @@ export async function submitMerge(f) {
   const keys = $$('[data-merge-key]', f).filter(x => x.checked).map(x => x.dataset.mergeKey);
   try {
     await api.admin.artists.merge(f.dataset.alias, to, keys.filter(k => k.startsWith('perf:')).map(k => k.slice(5)), keys.filter(k => k.startsWith('open:')).map(k => k.slice(5)));
-    ui.closeSheet(); ui.toast(`${byId(to)?.name || ''}의 다른 표기로 합쳤어요.`); resetArtistCache(); await renderArtists('candidates');
+    A.modal = null; ui.closeSheet(); ui.toast(`${byId(to)?.name || ''}의 다른 표기로 합쳤어요.`); resetArtistCache(); await renderArtists('candidates');
   } catch (e) { $('#mergeErr').textContent = ui.errMsg(e); }
 }
 
@@ -249,9 +269,10 @@ export async function saveLinks(kind, id, names) { if (id && A.link) await api.a
 /* ---------- 클릭·입력 ---------- */
 export async function artistAction(act, a) {
   switch (act) {
-    case 'ar-ignored': A.ignored = !A.ignored; await renderCandidates(); break;
-    case 'ar-ignore': case 'ar-unignore': try { await api.admin.artists.ignore(a.dataset.name, act === 'ar-ignore'); ui.toast(act === 'ar-ignore' ? '후보에서 제외했어요. \'제외한 이름 보기\'에서 되살릴 수 있어요.' : '되살렸어요.'); await renderCandidates(); } catch (e) { ui.toast(ui.errMsg(e)); } break;
-    case 'ar-approve': A.prefill = { name: a.dataset.name }; A.returnTo = '#/artists/candidates'; location.hash = '#/artists/edit/new'; break;
+    case 'ar-ignore': case 'ar-unignore': try { await api.admin.artists.ignore(a.dataset.name, act === 'ar-ignore'); A.modal = null; ui.closeSheet(); ui.toast(act === 'ar-ignore' ? '제외했어요. 맨 아래에서 다시 누르면 되살려요.' : '되살렸어요.'); await renderCandidates(); } catch (e) { ui.toast(ui.errMsg(e)); } break;
+    case 'ar-approve': A.prefill = { name: a.dataset.name }; A.returnTo = '#/artists/candidates'; location.hash = '#/artists/edit/new'; break;   // 검수 = 등록·수정 화면으로
+    case 'ar-cand-open': await openCandidate(a.dataset.name); break;
+    case 'ar-cand-delete': try { await api.admin.artists.ignore(a.dataset.name, true); A.modal = null; ui.closeSheet(); ui.toast('후보에서 제외했어요. 목록 맨 아래에서 되살릴 수 있어요.'); await renderCandidates(); } catch (e) { ui.toast(ui.errMsg(e)); } break;
     case 'ar-merge': mergeSheet(a.dataset.name); break;
     case 'ar-rel-remove': A.form.rel.delete(a.dataset.id); drawRel($('#relQ')?.value || ''); break;
     case 'ar-photo-clear': A.form.photoUrl = ''; $('#arPhoto').innerHTML = photo({ name: $('#artistForm').elements.name.value || '?' }); a.remove(); break;

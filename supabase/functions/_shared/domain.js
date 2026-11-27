@@ -149,10 +149,13 @@ export const REPORT_STATUS = {
   canceled: { label: '취소됨', badge: 'tba', line: '제보를 취소했습니다.' }
 };
 export const REJECT_REASONS = ['이미 등록된 공연입니다', '정보를 확인할 수 없습니다', '대중음악 공연이 아닙니다'];
+// 아티스트 제보 등록 실패 이유 (11/28, 문구는 2차 확인 요청에서 클라이언트 확인 중)
+export const ARTIST_REJECT_REASONS = ['이미 등록된 아티스트입니다', '정보를 확인할 수 없습니다', '대중음악 아티스트가 아닙니다'];
 export function validateReport(r) {
   const v = k => String(r?.[k] ?? '').trim();
   if (!v('title')) return '공연명을 입력해 주세요.';
-  if (!v('showDate') && !v('openAtText') && !v('ticketUrl') && !v('sourceUrl')) return '공연 날짜, 오픈 일시, 링크 중 하나는 알려 주세요.';
+  if (!v('showDate')) return '공연 날짜를 입력해 주세요.';                                   // 공연명·공연 날짜는 필수 (11/28)
+  if (r?.kind !== 'performance' && !v('openAtText')) return '티켓 오픈 날짜를 입력해 주세요.';   // 오픈 공지 제보는 오픈 날짜 필수, 시간은 선택
   if ((v('ticketUrl') && !/^https?:\/\//.test(v('ticketUrl'))) || (v('sourceUrl') && !/^https?:\/\//.test(v('sourceUrl')))) return '링크는 https:// 로 시작하는 주소로 넣어 주세요.';
   if (v('note').length > 300) return '메모는 300자까지 쓸 수 있습니다.';
   return '';

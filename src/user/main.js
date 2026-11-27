@@ -171,7 +171,15 @@ document.addEventListener('submit', async e => {
     else if (id === 'manualForm') {
       const d = new FormData(f);
       const rec = await api.records.createManual({ type: d.get('type'), title: String(d.get('title') || '').trim(), date: d.get('date'), venue: String(d.get('venue') || '').trim(), region: d.get('region') || '', artists: String(d.get('artists') || '').split(/[,·/]/).map(s => s.trim()).filter(Boolean) });
-      S.records.push(rec); track('attended_add', { item: 'manual', value: 'manual' }); toast('기록했습니다.'); S.myTab = rec.type; await checkNewBadge(); renderMy();
+      S.records.push(rec); track('attended_add', { item: 'manual', value: 'manual' });
+      // 기록하면서 공연 제보도 (체크했을 때). 제보가 안 돼도 기록은 남음
+      let reported = false;
+      if (d.get('report')) {
+        try { await api.reports.create({ kind: 'performance', title: rec.title, artists: rec.artists || [], venue: rec.venue || '', showDate: rec.date || '', openAtText: '', ticketUrl: '', sourceUrl: '', note: '나의 내내 직접 기록에서 함께 보낸 제보' }); track('report_submit', { value: 'performance', item: 'manual' }); reported = true; }
+        catch (er) { toast('기록했습니다. 제보는 보내지 못했습니다: ' + errMsg(er)); }
+      }
+      if (!d.get('report') || reported) toast(reported ? '기록하고 제보했습니다. 처리 상황은 내 제보에서 볼 수 있습니다.' : '기록했습니다.');
+      S.myTab = rec.type; await checkNewBadge(); renderMy();
     } else if (id === 'editForm') {
       const d = new FormData(f); const patch = { date: d.get('date') };
       if (d.has('venue')) Object.assign(patch, { venue: String(d.get('venue') || '').trim(), region: d.get('region') || '', artists: String(d.get('artists') || '').split(/[,·/]/).map(s => s.trim()).filter(Boolean) });

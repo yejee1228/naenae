@@ -36,7 +36,7 @@ export function renderSchedule() {
   const upd = S.meta.updatedAt ? new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(S.meta.updatedAt)) : '';
   page('schedule', `<section class="intro compact"><p class="eyebrow">LIVE SCHEDULE</p><h1>공연 일정</h1>
     <p class="muted small">출처 ${esc(S.meta.source || 'KOPIS')}${upd ? ' · ' + esc(upd) + ' 기준' : ''}</p></section>
-    <div class="filters"><input id="q" type="search" placeholder="공연명 · 공연장 · 아티스트" value="${esc(s.q)}" aria-label="공연 검색">
+    <div class="filters"><span class="search-wrap"><input id="q" type="search" placeholder="공연명 · 공연장 · 아티스트" value="${esc(s.q)}" aria-label="공연 검색" autocomplete="off"><button type="button" class="ar-clear" id="qClear" aria-label="검색어 지우기"${s.q ? '' : ' hidden'}>×</button></span>
       <div class="filter-row"><select id="region" aria-label="지역"><option value="">전체 지역</option>${regions.map(r => `<option ${s.region === r ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>
         <label class="switch"><input type="checkbox" id="club"${s.club ? ' checked' : ''}> 라이브클럽만</label>
         <label class="switch"><input type="checkbox" id="past"${s.past ? ' checked' : ''}> 지난 공연</label></div></div>
@@ -52,7 +52,8 @@ export function renderSchedule() {
     $('#pfList').innerHTML = list.length ? [...groups].map(([d, ps]) => `<section class="pf-group"><h3>${esc(L.fmtDayKo(d))}</h3>${ps.map(p => perfRow(p)).join('')}</section>`).join('')
       : `<div class="empty">${S.perfs.some(p => p.endDate >= today()) ? '조건에 맞는 공연이 없습니다.' : '아직 앞으로의 공연 일정이 없습니다.<br><button class="link" type="button" data-act="show-past">지난 공연 보기</button>'}</div>`;
   };
-  $('#q').addEventListener('input', draw);
+  $('#q').addEventListener('input', () => { $('#qClear').hidden = !$('#q').value; draw(); });
+  $('#qClear').addEventListener('click', () => { const q = $('#q'); q.value = ''; $('#qClear').hidden = true; q.focus(); draw(); });
   ['#region', '#club', '#past'].forEach(sel => $(sel).addEventListener('change', () => { draw(); track('schedule_filter', { value: sel.slice(1) }); }));
   draw();
 }

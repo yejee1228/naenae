@@ -179,3 +179,14 @@ a.adm-card:hover { border-color: var(--soon); }
 .adm-steps textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font: inherit; font-size: 13px; }
 .adm-file { width: fit-content; }
 .warn-row { background: #fdf6f2; }
+
+/* 후보 검수 모달: 넓은 폼 */
+.modal-body.wide { width: min(100%, 860px); text-align: left; }
+.modal-body.wide .adm-form { margin: 0; }
+@media (max-width: 760px) { .modal-body.wide { width: 100%; } }
+
+/* 후보 검수: 제외를 누른 상태 (맨 아래) */
+.cell-actions .btn.ghost.on { background: #fbebeb; border-color: #e3b4b4; color: #a33a3a; }
+
+/* 제보 상세를 바꾸는 동안 살짝 흐리게 (화면 전체 깜박임 대신) */
+.adm-detail.loading-soft { opacity: .55; transition: opacity .15s; }

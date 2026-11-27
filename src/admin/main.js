@@ -4,7 +4,7 @@ import '../shared/style.css';
 import './admin.css';
 import api from '../shared/api/index.js';
 import { L } from '../shared/lib.js';
-import { REPORT_STATUS, REJECT_REASONS, eventStatus, kstToday, nameKey, extractArtists, REGIONS } from '../shared/domain.js';
+import { REPORT_STATUS, REJECT_REASONS, ARTIST_REJECT_REASONS, eventStatus, kstToday, nameKey, extractArtists, REGIONS } from '../shared/domain.js';
 import { initArtists, renderArtists, artistAction, artistInput, artistChange, submitArtist, submitMerge, submitLink, initLinkBoxes, drawLinkBoxes, saveLinks, artistState } from './artists.js';
 
 const root = document.getElementById('admin');
@@ -50,7 +50,7 @@ function shell(sec, html) {
     <nav class="adm-nav" id="admNav" aria-label="관리자 메뉴"><button class="nav-close" type="button" data-act="menu-close" aria-label="메뉴 닫기">✕</button>
       <div class="brand"><img src="assets/logo.png" alt="내내" width="56" height="40"><div><b>관리자</b><small>${esc(u?.nickname || '')}</small></div></div>
       ${MENU.map(([k, n]) => `<a href="#/${k}" class="${k === sec ? 'on' : ''}"${k === sec ? ' aria-current="page"' : ''}>${n}${k === 'reports' && pending ? `<span class="nav-count" aria-label="검수 대기 ${pending}건">${pending}</span>` : ''}</a>`).join('')}
-      <div class="nav-foot"><a href="./index.html">사이트로 가기 ↗</a><button class="nav-link" type="button" data-act="logout">로그아웃</button></div>
+      <div class="nav-foot"><a href="./">사이트로 가기 ↗</a><button class="nav-link" type="button" data-act="logout">로그아웃</button></div>
     </nav>
     <main class="adm-main" id="main">${html}</main></div>`;
   document.title = `${TITLES[sec]} · 내내 관리자`;
@@ -74,13 +74,13 @@ function renderLogin() {
       <label>비밀번호<input type="password" name="password" required autocomplete="current-password" minlength="8"></label>
       ${api.isDemo ? `<p class="demo-note">시연 모드: 관리자 계정은 ${esc(api.adminEmailHint || '')} 이고 비밀번호는 확인하지 않아요.</p>` : ''}
       <p class="ferr" id="loginErr" role="alert"></p><button class="btn primary block" type="submit">로그인</button></form>
-    <p class="auth-links" style="text-align:center"><a class="link" href="./index.html">사이트로 가기</a></p></div>`;
+    <p class="auth-links" style="text-align:center"><a class="link" href="./">사이트로 가기</a></p></div>`;
 }
 function renderNoAuth() {
   document.title = '내내 관리자';
   root.innerHTML = `<div class="adm-login"><section class="auth-head"><img src="assets/logo.png" alt="내내 nae nae" width="120" height="85"><h1>관리자 권한이 없어요.</h1></section>
     <p class="muted small" style="text-align:center">운영자 계정으로 로그인해 주세요.</p>
-    <div style="display:grid;gap:8px"><a class="btn primary block" href="./index.html">사이트로 가기</a><button class="btn ghost block" type="button" data-act="logout">다른 계정으로 로그인</button></div></div>`;
+    <div style="display:grid;gap:8px"><a class="btn primary block" href="./">사이트로 가기</a><button class="btn ghost block" type="button" data-act="logout">다른 계정으로 로그인</button></div></div>`;
 }
 async function submitLogin(f) {
   const email = f.email.value.trim(); const password = f.password.value;
@@ -216,27 +216,64 @@ function drawChips(input) { if (input.dataset.chips === 'linkBoxes') { drawLinkB
 /* ---------- ADM-03 제보 ---------- */
 const R = { list: [], status: 'submitted', current: null, dups: [] };
 const KIND = { opening: '티켓 오픈', performance: '공연 일정', artist: '아티스트' };
-const R_TABS = ['submitted', 'reviewing', 'registered', 'rejected', 'canceled'];
+const R_TABS = ['all', 'submitted', 'reviewing', 'registered', 'rejected', 'canceled'];   // all = 전체
+/* 제보 관리: 처음 들어올 때만 화면 전체를 그리고, 필터는 목록만 · 항목은 오른쪽 상세만 바꿈 (깜박임 없음) */
+const R_COLS = '--cols: 120px 100px minmax(0,2fr) 1fr 90px';
+async function loadReportDetail(id) {
+  R.current = await api.admin.reports.open(id);   // 열면 '확인 중'으로 (R-72)
+  R.dups = R.current.kind === 'artist' ? (await api.admin.artists.list(R.current.title, 'all')).map(a => ({ type: '아티스트', title: a.name + (a.disambig ? ` (${a.disambig})` : ''), status: a.status })) : await api.admin.reports.duplicates(id);
+  const item = R.list.find(x => x.id === id); if (item) item.status = R.current.status;
+  pending = R.list.filter(r => r.status === 'submitted').length; updatePendingUi();
+}
 async function renderReports(status, id) {
   R.status = R_TABS.includes(status) ? status : 'submitted';
   R.current = null; R.dups = [];
-  if (id) {
-    try {
-      R.current = await api.admin.reports.open(id);
-      R.dups = R.current.kind === 'artist' ? (await api.admin.artists.list(R.current.title, 'all')).map(a => ({ type: '아티스트', title: a.name + (a.disambig ? ` (${a.disambig})` : ''), status: a.status })) : await api.admin.reports.duplicates(id);
-    } catch (e) { toast(errMsg(e)); }
-  }   // 열면 '확인 중'으로 (R-72)
   R.list = await api.admin.reports.list();
-  if (id && R.current) { pending = R.list.filter(r => r.status === 'submitted').length; updatePendingUi(); }
-  const count = s => R.list.filter(r => r.status === s).length;
-  const rows = R.list.filter(r => r.status === R.status).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-  const cols = '--cols: 120px 100px minmax(0,2fr) 1fr 90px';
-  main().innerHTML = head('제보 관리', '회원이 보낸 티켓 오픈·공연 제보예요. 열면 \'확인 중\'으로 바뀌어요.')
-    + `<div class="adm-tools"><div class="adm-chips" role="tablist" aria-label="제보 상태">${R_TABS.map(s => `<a role="tab" class="chip${R.status === s ? ' on' : ''}" aria-selected="${R.status === s}" href="#/reports/${s}">${REPORT_STATUS[s].label} ${count(s)}</a>`).join('')}</div></div>
-    <div class="adm-split${R.current ? ' detail-open' : ''}"><div class="adm-list-wrap"><div class="adm-list" role="table" aria-label="제보 목록"><div class="adm-row head" style="${cols}"><span>접수 시각</span><span>종류</span><span>공연명</span><span>제보자</span><span>상태</span></div>
-      ${rows.length ? rows.map(r => `<div class="adm-row click${R.current?.id === r.id ? ' on' : ''}" style="${cols}" data-href="#/reports/${R.status}/${encodeURIComponent(r.id)}" tabindex="0">
-        <span class="sub">${esc(fmtDT(r.createdAt))}</span><span data-m="hide">${KIND[r.kind] || '티켓 오픈'}</span><span class="t">${esc(r.title)}</span><span class="sub">${esc(r.nickname || '')}</span><span><span class="badge ${REPORT_STATUS[r.status].badge}">${REPORT_STATUS[r.status].label}</span></span><span class="go" aria-hidden="true">›</span></div>`).join('') : '<p class="adm-empty">이 상태의 제보가 없어요.</p>'}</div></div>
-      <aside class="adm-detail" aria-label="제보 상세">${R.current ? reportDetail(R.current) : '<p class="muted small">왼쪽 목록에서 제보를 고르면 여기에 내용이 보여요.</p>'}</aside></div>`;
+  if (id) { try { await loadReportDetail(id); } catch (e) { toast(errMsg(e)); } }
+  main().innerHTML = head('제보 관리', '회원이 보낸 티켓 오픈·공연·아티스트 제보예요. 열면 \'확인 중\'으로 바뀌어요.')
+    + `<div class="adm-tools"><div class="adm-chips" role="tablist" aria-label="제보 상태" id="repChips"></div></div>
+    <div class="adm-split${R.current ? ' detail-open' : ''}" id="repSplit"><div class="adm-list-wrap"><div class="adm-list" role="table" aria-label="제보 목록" id="repList"></div></div>
+      <aside class="adm-detail" aria-label="제보 상세" id="repDetail"></aside></div>`;
+  drawReportChips(); drawReportList(); drawReportDetail();
+}
+/* 이미 제보 관리 화면이면 바뀐 부분만 (route에서 부름) */
+async function updateReports(status, id) {
+  const st = R_TABS.includes(status) ? status : 'submitted';
+  const statusChanged = st !== R.status; R.status = st;
+  if (!id) {
+    if (statusChanged) { drawReportChips(); drawReportList(); }
+    R.current = null; R.dups = []; drawReportDetail();
+    R.list = await api.admin.reports.list(); drawReportChips(); drawReportList();   // 최신으로 (조용히 다시 그림)
+    return;
+  }
+  if (statusChanged) { drawReportChips(); drawReportList(); }
+  if (R.current?.id !== id || statusChanged) {
+    markReportRow(id); $('#repDetail').classList.add('loading-soft');
+    try { R.list = await api.admin.reports.list(); await loadReportDetail(id); }
+    catch (e) { toast(errMsg(e)); }
+    $('#repDetail')?.classList.remove('loading-soft');
+    drawReportChips(); drawReportList(); drawReportDetail();
+  }
+}
+function drawReportChips() {
+  const count = s => (s === 'all' ? R.list.length : R.list.filter(r => r.status === s).length);
+  const box = $('#repChips'); if (!box) return;
+  // PC는 필터를 눌러도 열어 둔 상세를 그대로 두고, 모바일(목록·상세가 한 화면씩)은 필터를 누르면 목록으로
+  const keep = R.current && !matchMedia('(max-width: 767px)').matches;
+  box.innerHTML = R_TABS.map(s => `<a role="tab" class="chip${R.status === s ? ' on' : ''}" aria-selected="${R.status === s}" href="#/reports/${s}${keep ? '/' + encodeURIComponent(R.current.id) : ''}">${s === 'all' ? '전체' : REPORT_STATUS[s].label} ${count(s)}</a>`).join('');
+}
+function drawReportList() {
+  const box = $('#repList'); if (!box) return;
+  const rows = R.list.filter(r => R.status === 'all' || r.status === R.status).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  box.innerHTML = `<div class="adm-row head" style="${R_COLS}"><span>접수 시각</span><span>종류</span><span>공연명</span><span>제보자</span><span>상태</span></div>
+    ${rows.length ? rows.map(r => `<div class="adm-row click${R.current?.id === r.id ? ' on' : ''}" style="${R_COLS}" data-href="#/reports/${R.status}/${encodeURIComponent(r.id)}" data-rid="${esc(r.id)}" tabindex="0">
+      <span class="sub">${esc(fmtDT(r.createdAt))}</span><span data-m="hide">${KIND[r.kind] || '티켓 오픈'}</span><span class="t">${esc(r.title)}</span><span class="sub">${esc(r.nickname || '')}</span><span><span class="badge ${REPORT_STATUS[r.status].badge}">${REPORT_STATUS[r.status].label}</span></span><span class="go" aria-hidden="true">›</span></div>`).join('') : '<p class="adm-empty">이 상태의 제보가 없어요.</p>'}`;
+}
+function markReportRow(id) { $$('#repList [data-rid]').forEach(r => r.classList.toggle('on', r.dataset.rid === id)); }
+function drawReportDetail() {
+  const box = $('#repDetail'); if (!box) return;
+  box.innerHTML = R.current ? reportDetail(R.current) : '<p class="muted small">왼쪽 목록에서 제보를 고르면 여기에 내용이 보여요.</p>';
+  $('#repSplit')?.classList.toggle('detail-open', !!R.current);
 }
 function reportDetail(r) {
   const st = REPORT_STATUS[r.status]; const nick = R.list.find(x => x.id === r.id)?.nickname || r.nickname || '';
@@ -256,7 +293,7 @@ function reportDetail(r) {
 }
 function rejectSheet() {
   sheet(`<h2>등록 실패 이유</h2><p class="small muted">고른 이유가 제보자 '내 제보'에 그대로 보여요.</p><form class="adm-form" id="rejectForm" style="grid-template-columns:1fr;border:0;padding:0">
-    ${REJECT_REASONS.map((t, i) => `<label class="check"><input type="radio" name="reason" value="${esc(t)}"${i === 0 ? ' checked' : ''}> ${esc(t)}</label>`).join('')}
+    ${(R.current?.kind === 'artist' ? ARTIST_REJECT_REASONS : REJECT_REASONS).map((t, i) => `<label class="check"><input type="radio" name="reason" value="${esc(t)}"${i === 0 ? ' checked' : ''}> ${esc(t)}</label>`).join('')}
     <label class="check"><input type="radio" name="reason" value="__custom"> 직접 입력</label><textarea name="custom" maxlength="200" rows="2" placeholder="제보자에게 보일 문구" aria-label="직접 입력한 이유"></textarea>
     <p class="ferr" id="rejectErr" role="alert"></p><button class="btn primary block" type="submit">등록 실패로 처리</button></form>`);
 }
@@ -344,7 +381,7 @@ function previewPromo() {
 
 /* ---------- ADM-05 공연 ---------- */
 const P = { list: [], filter: 'upcoming', q: '', page: 0, fromReport: null, runs: [] };
-const P_FILTERS = [['upcoming', '앞으로'], ['past', '지난 공연'], ['kopis', 'KOPIS'], ['manual', '직접 등록'], ['noArtist', '아티스트 비어 있음'], ['edited', '운영자가 고친 KOPIS'], ['missing', 'KOPIS에서 빠짐'], ['hidden', '숨김']];
+const P_FILTERS = [['all', '전체'], ['upcoming', '앞으로'], ['past', '지난 공연'], ['kopis', 'KOPIS'], ['manual', '직접 등록'], ['noArtist', '아티스트 비어 있음'], ['edited', '운영자가 고친 KOPIS'], ['missing', 'KOPIS에서 빠짐'], ['hidden', '숨김']];
 const LOCK_NAME = { title: '공연명', start_date: '공연일', end_date: '끝나는 날', venue: '공연장', region: '지역', artists: '출연진', ticket_links: '예매처' };
 const PAGE = 50;
 async function renderPerformances() {
@@ -363,6 +400,7 @@ function drawPerformances() {
   const t = today(); const k = nameKey(P.q);
   const linked = new Map(O.list.filter(o => o.performanceId && !o.hidden).map(o => [o.performanceId, o]));
   let rows = P.list.filter(p => {
+    if (P.filter === 'all') return true;   // 전체: 숨김 포함 모든 공연
     if (P.filter === 'hidden') return p.hidden; if (p.hidden) return false;
     if (P.filter === 'upcoming' && p.endDate < t) return false;
     if (P.filter === 'past' && p.endDate >= t) return false;
@@ -494,6 +532,8 @@ async function route() {
   if (!u.isAdmin) { renderNoAuth(); return; }
   const [sec, a, b] = parts;
   if (!TITLES[sec]) { location.replace('#/dashboard'); return; }
+  // 제보 관리 안에서 필터·항목만 바뀌면 화면 전체를 다시 그리지 않음 (깜박임 없이 목록·상세만)
+  if (sec === 'reports' && $('#repSplit')) { try { await updateReports(a, b); } catch (e) { toast(errMsg(e)); } return; }
   try { pending = (await api.admin.dashboard()).reportsSubmitted || 0; } catch { /* 표시만 */ }
   shell(sec, '<p class="loading">불러오는 중…</p>');
   try {
@@ -548,7 +588,7 @@ document.addEventListener('click', async e => {
     }
   }
 });
-document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches?.('[data-href]')) location.hash = e.target.dataset.href; });
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches?.('[data-href]')) location.hash = e.target.dataset.href; if (e.key === 'Enter' && e.target.matches?.('.adm-row[role=button][data-act]')) e.target.click(); });
 document.addEventListener('click', e => {
   const c = e.target.closest('[data-filter]'); if (!c) return;
   if (c.dataset.filter === 'O') { O.filter = c.dataset.v; drawOpenings(); }
