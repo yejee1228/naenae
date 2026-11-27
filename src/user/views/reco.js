@@ -21,9 +21,9 @@ export function hexSvg(values, { muted = false } = {}) {
 function tasteCard() {
   const user = api.auth.current();
   if (!user) return `<section class="taste guest">${hexSvg(SAMPLE, { muted: true })}
-    <div class="taste-over"><b>로그인하면 내 취향에 맞춰 추천해요</b><button class="btn primary small" type="button" data-act="login-sheet" data-ctx="reco">로그인 · 회원가입</button></div></section>`;
+    <div class="taste-over"><b>로그인하면 내 취향에 맞춰 추천합니다</b><button class="btn primary small" type="button" data-act="login-sheet" data-ctx="reco">로그인 · 회원가입</button></div></section>`;
   const hex = hexagon(S.records, S.interests);
-  if (hex.empty) return `<section class="taste empty-taste"><p class="eyebrow">MY TASTE</p><p class="small muted">공연을 담고 기록하면 내 취향이 그려져요.</p><a class="btn small" href="#/schedule">관심 아티스트 담으러 가기</a></section>`;
+  if (hex.empty) return `<section class="taste empty-taste"><p class="eyebrow">MY TASTE</p><p class="small muted">공연을 담고 기록하면 내 취향이 그려집니다.</p><a class="btn small" href="#/schedule">관심 아티스트 담으러 가기</a></section>`;
   const primary = L.computeBadges(badgeRecords(), S.interests, 'all').primary;
   return `<button type="button" class="taste" data-act="hex-open"><span class="taste-head"><span class="eyebrow">MY TASTE</span><span class="guide-link">ⓘ</span></span>${hexSvg(hex.values)}
     <span class="taste-sum">${esc(hexSummary(hex, primary?.name))}</span></button>`;
@@ -31,14 +31,14 @@ function tasteCard() {
 export function hexSheet() {
   const hex = hexagon(S.records, S.interests);
   track('hexagon_open');
-  sheet(`<h2>내 취향 육각형</h2><ul class="hex-list">${HEX_AXES.map(a => `<li><b>${a.name}</b><span>${a.q}</span><em>${hex.values[a.key]}</em></li>`).join('')}</ul><p class="small muted">기간: 전체 기록 기준 · 기록을 바탕으로 매번 다시 계산해요.</p>`);
+  sheet(`<h2>내 취향 육각형</h2><ul class="hex-list">${HEX_AXES.map(a => `<li><b>${a.name}</b><span>${a.q}</span><em>${hex.values[a.key]}</em></li>`).join('')}</ul><p class="small muted">기간: 전체 기록 기준 · 기록을 바탕으로 매번 다시 계산합니다.</p>`);
 }
 const section = (title, items) => (items.length ? `<section class="reco"><h2>${title}</h2>${items.map(x => perfRow(x.perf, x.reason)).join('')}</section>` : '');
 export function renderReco() {
   const user = api.auth.current();
   track('reco_view', { value: user ? 'member' : 'guest' });
   const s = recommendSections(S.perfs, user ? S.records : [], user ? S.interests : [], S.clubVenues, today());
-  const club = section('이번 주 라이브클럽 공연', s.club) || `<section class="reco"><h2>이번 주 라이브클럽 공연</h2>${emptyBox('이번 주 라이브클럽 공연이 없어요.')}</section>`;
+  const club = section('이번 주 라이브클럽 공연', s.club) || `<section class="reco"><h2>이번 주 라이브클럽 공연</h2>${emptyBox('이번 주 라이브클럽 공연이 없습니다.')}</section>`;
   page('reco', `<section class="intro compact"><p class="eyebrow">FOR YOU</p><h1>추천</h1></section>
     ${tasteCard()}
     ${user ? section('관심 아티스트가 나오는 공연', s.fav) + section('내가 다녀온 공연장의 공연', s.venue) : ''}

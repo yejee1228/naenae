@@ -17,7 +17,7 @@ const resetAR = () => Object.assign(AR, { artistKind: 'group', members: [], grou
 export function setArtistPrefill(name) { resetAR(); AR.kind = 'artist'; AR.title = String(name || '').trim().slice(0, 40); }
 
 const kindSelect = k => `<label>제보 종류 *<select name="kind">${Object.entries(KIND_LABEL).map(([v, n]) => `<option value="${v}"${k === v ? ' selected' : ''}>${n}</option>`).join('')}</select></label>`;
-const MEMO_HINT = '다른 이름표기나 최근 공연(일시, 장소 등 자세할수록 좋아요) 등 아티스트를 설명할 수 있는 내용을 적어주세요';
+const MEMO_HINT = '다른 이름표기나 최근 공연(일시, 장소 등 자세할수록 좋습니다) 등 아티스트를 설명할 수 있는 내용을 적어주세요';
 function artistForm() {
   const group = AR.artistKind === 'group';
   const chips = group
@@ -25,13 +25,13 @@ function artistForm() {
     : AR.group ? `<span class="pick-chip${AR.group.id ? '' : ' name-only'}">${esc(AR.group.name)}${AR.group.id ? '' : ' (목록에 없는 그룹)'}<button type="button" data-act="report-chip-remove" data-i="0" aria-label="소속 그룹 빼기">×</button></span>` : '';
   return `${kindSelect('artist')}
     <label>아티스트 이름 * <small>${group ? '활동명이나 그룹명' : '활동명'}</small><input type="text" name="title" required maxlength="40" value="${esc(AR.title)}"></label>
-    <div class="seg2" role="group" aria-label="그룹인가요, 개인인가요?"><span class="lbl">그룹인가요, 개인인가요?</span>
+    <div class="seg2" role="group" aria-label="그룹입니까, 개인입니까?"><span class="lbl">그룹입니까, 개인입니까?</span>
       <button type="button" data-act="report-artist-kind" data-v="group" aria-pressed="${group}">그룹 (밴드 · 듀오 등)</button><button type="button" data-act="report-artist-kind" data-v="solo" aria-pressed="${!group}">개인</button></div>
-    <div class="pick-sec"><span class="lbl">${group ? '소속 아티스트' : '소속 그룹'} <small>${group ? '선택 · 멤버를 찾아 체크하거나 이름으로 추가' : '선택 · 입력하면 등록된 그룹을 찾아 드려요'}</small></span>
+    <div class="pick-sec"><span class="lbl">${group ? '소속 아티스트' : '소속 그룹'} <small>${group ? '선택 · 멤버를 찾아 체크하거나 이름으로 추가' : '선택 · 입력하면 등록된 그룹을 찾아 드립니다'}</small></span>
       ${chips ? `<div class="pick-chips">${chips}</div>` : ''}
       ${group || !AR.group ? `<div class="pick-box"><label class="pick-search">${SEARCH_SVG}<input id="pickQ" type="search" placeholder="${group ? '멤버 이름으로 찾기' : '예: 그룹 이름'}" autocomplete="off" aria-label="${group ? '소속 아티스트 찾기' : '소속 그룹 찾기'}"></label><div id="pickResults"></div></div>` : ''}
-      <small class="muted">${group ? '체크한 멤버는 등록된 아티스트로, 이름으로 추가한 멤버는 운영자가 확인해요.' : '고르면 등록된 그룹과 연결되고, 그대로 쓰면 운영자가 확인해요.'}</small></div>
-    <label>인스타그램 또는 참고 링크 * <small>운영자가 아티스트를 확인할 때 써요</small><input type="url" name="sourceUrl" inputmode="url" placeholder="https://" value="${esc(AR.sourceUrl)}"></label>
+      <small class="muted">${group ? '체크한 멤버는 등록된 아티스트로, 이름으로 추가한 멤버는 운영자가 확인합니다.' : '고르면 등록된 그룹과 연결되고, 그대로 쓰면 운영자가 확인합니다.'}</small></div>
+    <label>인스타그램 또는 참고 링크 * <small>운영자가 아티스트를 확인할 때 씁니다</small><input type="url" name="sourceUrl" inputmode="url" placeholder="https://" value="${esc(AR.sourceUrl)}"></label>
     <label>메모 <small>선택 · 300자</small><textarea name="note" maxlength="300" rows="4" placeholder="${esc(MEMO_HINT)}">${esc(AR.note)}</textarea></label>
     <p class="ferr" id="reportErr" role="alert"></p><button class="btn primary block" type="submit">제보 보내기</button>`;
 }
@@ -56,9 +56,9 @@ export function renderReport(id) {
   else if (p.kind) AR.kind = p.kind;
   const artist = AR.kind === 'artist';
   page('open', `<section class="intro compact report-head"><div><p class="eyebrow">REPORT</p><h1>${artist ? '아티스트 제보하기' : '공연 제보하기'}</h1></div>${mine.length ? `<a class="link" href="#/report/mine">내 제보 ${mine.length}</a>` : ''}
-    <p class="muted small">${artist ? '찾는 아티스트가 없으면 알려 주세요. 운영자가 확인한 뒤 등록해 드려요.' : '티켓 오픈 소식이나 아직 없는 공연을 알려 주세요. 운영자가 확인한 뒤 올려 드려요.'}</p></section>
+    <p class="muted small">${artist ? '찾는 아티스트가 없으면 알려 주세요. 운영자가 확인한 뒤 등록해 드립니다.' : '티켓 오픈 소식이나 아직 없는 공연을 알려 주세요. 운영자가 확인한 뒤 올려 드립니다.'}</p></section>
     <form class="form report-form" id="reportForm" autocomplete="off" novalidate data-kind="${artist ? 'artist' : 'event'}">${artist ? artistForm() : eventForm({ ...p, kind: AR.kind })}
-      <p class="hint">제보한 내용은 확인 과정에서 다듬어져 올라갈 수 있어요.</p></form>`, { back: artist ? '#/my/artists' : '#/open' });
+      <p class="hint">제보한 내용은 확인 과정에서 다듬어져 올라갈 수 있습니다.</p></form>`, { back: artist ? '#/my/artists' : '#/open' });
   const f = $('#reportForm');
   f.elements.kind.addEventListener('change', e => { captureAR(); AR.kind = e.target.value; renderReport(AR.kind === 'artist' ? 'artist' : ''); });
   if (artist && $('#pickQ')) { $('#pickQ').addEventListener('input', e => drawPicks(e.target.value)); }
@@ -116,15 +116,15 @@ export async function submitReport(form) {
   }
   try {
     await api.reports.create(input); track('report_submit', { value: input.kind }); form.reset(); if (input.kind === 'artist') { resetAR(); renderReport('artist'); }
-    sheet(`<p class="eyebrow">THANK YOU</p><h2>제보 고마워요!</h2><p class="small muted">운영자가 확인한 뒤 ${input.kind === 'artist' ? '등록해' : '올려'} 드릴게요. 처리 상황은 내 제보에서 볼 수 있어요.</p><a class="btn primary block" href="#/report/mine" data-act="close-sheet">내 제보 보기</a>`);
+    sheet(`<p class="eyebrow">THANK YOU</p><h2>제보 감사합니다!</h2><p class="small muted">운영자가 확인한 뒤 ${input.kind === 'artist' ? '등록해' : '올려'} 드리겠습니다. 처리 상황은 내 제보에서 볼 수 있습니다.</p><a class="btn primary block" href="#/report/mine" data-act="close-sheet">내 제보 보기</a>`);
   } catch (e) { $('#reportErr').textContent = errMsg(e); }
 }
 const registeredLine = r => {
   if (r.registeredArtistId) {   // R-140: 담기 버튼은 등록된 뒤에만
     const on = S.interests.some(i => i.artistId === r.registeredArtistId);
-    return `아티스트로 등록됐어요. ${on ? '<span class="muted">관심 아티스트에 있어요</span>' : `<button class="btn small" type="button" data-act="interest-artist" data-id="${esc(r.registeredArtistId)}" data-name="${esc(r.title)}" data-from="report">♡ 관심 아티스트로 담기</button>`}`;
+    return `아티스트로 등록되었습니다. ${on ? '<span class="muted">관심 아티스트에 있습니다</span>' : `<button class="btn small" type="button" data-act="interest-artist" data-id="${esc(r.registeredArtistId)}" data-name="${esc(r.title)}" data-from="report">♡ 관심 아티스트로 담기</button>`}`;
   }
-  return `${r.registeredOpeningId ? '오픈 공지에' : '공연 일정에'} 올라갔어요. <a class="link" href="${r.registeredOpeningId ? '#/open' : '#/perf/' + encodeURIComponent(r.registeredPerformanceId || '')}">보러 가기 ›</a>`;
+  return `${r.registeredOpeningId ? '오픈 공지에' : '공연 일정에'} 올라갔습니다. <a class="link" href="${r.registeredOpeningId ? '#/open' : '#/perf/' + encodeURIComponent(r.registeredPerformanceId || '')}">보러 가기 ›</a>`;
 };
 const card = r => {
   const st = REPORT_STATUS[r.status] || REPORT_STATUS.submitted;
@@ -140,7 +140,7 @@ export async function renderMyReports() {
   track('report_mine_view');
   try { mine = (await api.reports.listMine()).filter(r => r.status !== 'canceled'); } catch (e) { toast(errMsg(e)); mine = []; }
   page('my', `<section class="intro compact"><p class="eyebrow">MY REPORT</p><h1>내 제보</h1></section>
-    ${mine.length ? `<div class="rp-list">${mine.map(card).join('')}</div>` : '<div class="empty">아직 제보한 내용이 없어요.<br><a class="btn small" href="#/report">제보하러 가기</a></div>'}
+    ${mine.length ? `<div class="rp-list">${mine.map(card).join('')}</div>` : '<div class="empty">아직 제보한 내용이 없습니다.<br><a class="btn small" href="#/report">제보하러 가기</a></div>'}
     ${mine.length ? '<a class="btn ghost block" href="#/report">새로 제보하기</a>' : ''}`, { back: '#/settings' });
   if (mine.some(r => r.userSeen === false) || api.auth.current()?.reportUnseen) api.reports.markSeen().catch(() => {});   // R-76: 한 번 보면 사라짐
 }
@@ -148,7 +148,7 @@ export function reportAction(act, id) {
   const r = mine.find(x => x.id === id); if (!r) return;
   if (act === 'report-reason') {
     track('report_reason_open');
-    sheet(`<h2>등록하지 못했어요</h2><p class="small muted">${esc(r.title)}</p><p>${esc(r.rejectReason || '')}</p><p class="small muted">다른 정보로 다시 제보할 수 있어요.</p><button class="btn primary block" type="button" data-act="report-retry" data-id="${esc(r.id)}">다시 제보하기</button>`);
+    sheet(`<h2>등록하지 못했습니다</h2><p class="small muted">${esc(r.title)}</p><p>${esc(r.rejectReason || '')}</p><p class="small muted">다른 정보로 다시 제보할 수 있습니다.</p><button class="btn primary block" type="button" data-act="report-retry" data-id="${esc(r.id)}">다시 제보하기</button>`);
   } else if (act === 'report-detail') {
     const st = REPORT_STATUS[r.status];
     const rows = r.kind === 'artist'
@@ -159,6 +159,6 @@ export function reportAction(act, id) {
   } else if (act === 'report-retry') { prefill = r; location.hash = r.kind === 'artist' ? '#/report/artist' : '#/report'; }
 }
 export async function cancelReport(id) {
-  try { await api.reports.cancel(id); track('report_cancel'); toast('제보를 취소했어요.'); await renderMyReports(); } catch (e) { toast(errMsg(e)); }
+  try { await api.reports.cancel(id); track('report_cancel'); toast('제보를 취소했습니다.'); await renderMyReports(); } catch (e) { toast(errMsg(e)); }
 }
 export { S };

@@ -5,7 +5,7 @@ import { ApiError, fail, fromSupabase } from './errors.js';
 import { nameKey } from '../domain.js';
 
 const toLinks = rows => (rows || []).map(l => ({ artistId: l.artist_id, name: l.name || '' }));
-const toPerf = r => r && ({ id: r.id, source: r.source, kopisId: r.kopis_id, title: r.title, startDate: r.start_date, endDate: r.end_date, venue: r.venue, region: r.region, artists: r.artists || [], artistsLocked: r.artists_locked, castRaw: r.cast_raw || '', ticketLinks: r.ticket_links || [], hidden: r.is_hidden, timeText: r.time_text, priceText: r.price_text, ageText: r.age_text, updatedAt: r.updated_at, links: toLinks(r.performance_artists) });
+const toPerf = r => r && ({ id: r.id, source: r.source, kopisId: r.kopis_id, title: r.title, startDate: r.start_date, endDate: r.end_date, venue: r.venue, region: r.region, artists: r.artists || [], artistsLocked: r.artists_locked, castRaw: r.cast_raw || '', ticketLinks: r.ticket_links || [], hidden: r.is_hidden, timeText: r.time_text, priceText: r.price_text, ageText: r.age_text, updatedAt: r.updated_at, links: toLinks(r.performance_artists), lockedFields: r.locked_fields || [], kopisMissing: !!r.kopis_missing });
 const fromPerf = p => ({ id: p.id, source: p.source || 'manual', title: p.title, start_date: p.startDate, end_date: p.endDate || p.startDate, venue: p.venue || '', region: p.region || '', artists: p.artists || [], ticket_links: p.ticketLinks || [] });
 const toOpening = r => r && ({ id: r.id, title: r.title, artists: r.artists || [], venue: r.venue, showDate: r.show_date, openAt: r.open_at, openHasTime: r.open_has_time, vendor: r.vendor, ticketUrl: r.ticket_url, note: r.note, performanceId: r.performance_id, isPublished: r.is_published, hidden: r.is_hidden, source: r.source, reportId: r.report_id, updatedAt: r.updated_at, links: toLinks(r.opening_artists) });
 const PERF_SEL = '*, performance_artists(artist_id, name)'; const OPEN_SEL = '*, opening_artists(artist_id, name)';
@@ -25,7 +25,7 @@ export function createSupabaseBackend(cfg) {
   const listeners = new Set();
   const current = () => (profile ? { id: profile.id, nickname: profile.nickname, provider: profile.provider, email: authUser?.email || '', isAdmin: profile.is_admin, marketing: profile.marketing_opt_in, reportUnseen: profile.report_unseen } : null);
   const emit = () => listeners.forEach(f => { try { f(current()); } catch { /* 무시 */ } });
-  const uid = () => { if (!authUser) fail('unauthorized', '로그인이 필요해요.'); return authUser.id; };
+  const uid = () => { if (!authUser) fail('unauthorized', '로그인이 필요합니다.'); return authUser.id; };
   async function refresh(session) {
     authUser = session?.user || null; profile = null; pending = null;
     if (authUser) {
@@ -49,20 +49,26 @@ export function createSupabaseBackend(cfg) {
     cancelProfile() { pending = null; sb.auth.signOut(); },
     async signUpEmail({ email, password, nickname, consents }) {
       const { data, error } = await sb.auth.signUp({ email, password, options: { data: { nickname, consents }, emailRedirectTo: location.href.split('#')[0] } });
-      if (error) throw (/registered/i.test(error.message) ? new ApiError('conflict', '이미 가입된 이메일이에요. 로그인해 주세요.') : fromSupabase(error));
+      if (error) throw (/registered/i.test(error.message) ? new ApiError('conflict', '이미 가입된 이메일입니다. 로그인해 주세요.') : fromSupabase(error));
       if (data.session) { await refresh(data.session); await auth.completeProfile({ nickname, consents }); return { verificationRequired: false }; }
       return { verificationRequired: true };   // R-06a: 인증 메일 → 링크 누르면 로그인되고, 첫 로그인 때 프로필(닉네임·약관) 확정
     },
     async signInEmail({ email, password }) {
       const { data, error } = await sb.auth.signInWithPassword({ email, password });
-      if (error) throw new ApiError('validation', /confirm/i.test(error.message) ? '메일함에서 인증 링크를 먼저 눌러 주세요.' : '이메일 또는 비밀번호가 맞지 않아요.');
+      if (error) throw new ApiError('validation', /confirm/i.test(error.message) ? '메일함에서 인증 링크를 먼저 눌러 주세요.' : '이메일 또는 비밀번호가 일치하지 않습니다.');
       await refresh(data.session);
-      if (pending) { const m = data.user.user_metadata || {}; if (m.nickname && m.consents) await auth.completeProfile({ nickname: m.nickname, consents: m.consents }); }
+      if (pending) {
+        const m = data.user.user_metadata || {};
+        // 인증을 기다리는 사이 같은 닉네임이 생겼으면 추가 정보 화면에서 새 닉네임을 받음 (R-07)
+        if (m.nickname && m.consents) try { await auth.completeProfile({ nickname: m.nickname, consents: m.consents }); } catch (e) { if (e.code !== 'conflict') throw e; pending = { ...pending, nicknameTaken: true }; emit(); }
+      }
       return current();
     },
     async sendPasswordReset(email) { await q(sb.auth.resetPasswordForEmail(email, { redirectTo: location.href.split('#')[0] })); return true; },
     async signOut() { await sb.auth.signOut(); profile = null; emit(); },
     async updateNickname(nickname) { profile = (await q(sb.from('profiles').update({ nickname }).eq('id', uid()).select().single())); emit(); return current(); },
+    async nicknameAvailable(nickname) { return !!(await rpc('nickname_available', { p_nickname: nickname })); },   // R-07
+    async emailStatus(email) { return (await rpc('email_status', { p_email: email })) || { status: 'available' }; },   // R-06e
     async setMarketing(agreed) { await rpc('set_marketing', { p_agreed: !!agreed }); profile = { ...profile, marketing_opt_in: !!agreed }; emit(); },
     async withdraw() { await rpc('withdraw'); await sb.auth.signOut(); profile = null; emit(); }
   };
@@ -74,7 +80,7 @@ export function createSupabaseBackend(cfg) {
       const rows = []; for (let from = 0; ; from += 1000) { const page = await q(sb.from('performances').select(PERF_SEL).gte('end_date', since).order('start_date').range(from, from + 999)); rows.push(...page); if (page.length < 1000) break; }
       return rows.map(toPerf);
     },
-    async performance(id) { const r = await q(sb.from('performances').select(PERF_SEL).eq('id', id).maybeSingle()); if (!r) fail('not_found', '공연 정보를 찾지 못했어요.'); return toPerf(r); },
+    async performance(id) { const r = await q(sb.from('performances').select(PERF_SEL).eq('id', id).maybeSingle()); if (!r) fail('not_found', '공연 정보를 찾지 못했습니다.'); return toPerf(r); },
     async promotions() { return (await q(sb.from('promotions').select('*').order('end_date'))).map(r => toPromo(r, publicUrl)); },
     async clubVenues() { return (await q(sb.from('club_venues').select('name'))).map(r => r.name); },
     async meta() { return { updatedAt: (await q(sb.from('performances').select('updated_at').eq('source', 'kopis').order('updated_at', { ascending: false }).limit(1)))[0]?.updated_at || '', source: 'KOPIS' }; }
@@ -87,7 +93,7 @@ export function createSupabaseBackend(cfg) {
       if (performanceId) { const p = await content.performance(performanceId); snap = { performance_id: p.id, title: p.title, date: p.startDate, venue: p.venue, region: p.region, artists: p.artists }; }
       else { const o = toOpening(await q(sb.from('openings').select('*').eq('id', openingId).single())); snap = { opening_id: o.id, title: o.title, date: o.showDate, venue: o.venue, artists: o.artists }; }
       try { return toRecord(await q(sb.from('records').insert({ user_id: uid(), type: 'planned', ...snap }).select().single())); }
-      catch (e) { if (e.code === 'conflict') fail('conflict', '이미 보고 싶은 공연에 있어요.'); throw e; }
+      catch (e) { if (e.code === 'conflict') fail('conflict', '이미 보고 싶은 공연에 있습니다.'); throw e; }
     },
     async unplan(id) { await q(sb.from('records').delete().eq('id', id)); },
     async attend({ performanceId, date }) { const r = await rpc('attend', { p_performance_id: performanceId, p_date: date }); return { record: toRecord(r.record), removedPlannedId: r.removedPlannedId }; },
@@ -104,7 +110,7 @@ export function createSupabaseBackend(cfg) {
     async add(ref, source = 'manual') {
       const r0 = typeof ref === 'string' ? { name: ref } : ref;
       const row = { user_id: uid(), name: String(r0.name || '').trim(), source, artist_id: r0.artistId || null };
-      try { return toInterest(await q(sb.from('interests').insert(row).select(ISEL).single())); } catch (e) { if (e.code === 'conflict') fail('conflict', '이미 관심 아티스트예요.'); throw e; }
+      try { return toInterest(await q(sb.from('interests').insert(row).select(ISEL).single())); } catch (e) { if (e.code === 'conflict') fail('conflict', '이미 관심 아티스트입니다.'); throw e; }
     },
     async remove(ref) {
       const r0 = typeof ref === 'string' ? { name: ref } : ref;
@@ -132,7 +138,8 @@ export function createSupabaseBackend(cfg) {
   const save = async (table, row) => q(row.id ? sb.from(table).update(row).eq('id', row.id).select().single() : sb.from(table).insert(row).select().single());
   const admin = {
     isAdmin: () => !!profile?.is_admin,
-    async dashboard() { const d = await rpc('admin_dashboard'); const upcoming = (await q(sb.from('openings').select('*').gte('open_at', new Date().toISOString()).order('open_at').limit(3))).map(toOpening); return { ...d, upcoming, metrics7d: d.metrics7d || {} }; },
+    async dashboard() { const d = await rpc('admin_dashboard'); const upcoming = (await q(sb.from('openings').select('*').gte('open_at', new Date().toISOString()).order('open_at').limit(3))).map(toOpening); const run = r => r && ({ id: r.id, startedAt: r.started_at, finishedAt: r.finished_at, status: r.status, listCount: r.list_count, error: r.error, mode: r.mode || 'full' });
+      return { ...d, lastSync: run(d.lastSync), lastSuccess: run(d.lastSuccess), upcoming, metrics7d: d.metrics7d || {} }; },
     openings: {
       async list() { return (await q(sb.from('openings').select(OPEN_SEL).order('updated_at', { ascending: false }))).map(toOpening); },
       async save(o) { const row = fromOpening(o); if (!row.id) delete row.id; row.updated_by = uid(); if (!o.id) row.created_by = uid(); return toOpening(await save('openings', row)); },
@@ -174,6 +181,7 @@ export function createSupabaseBackend(cfg) {
       async hide(id, hidden = true) { return rpc('admin_artist_hide', { p_id: id, p_hidden: !!hidden }); },
       async candidates(qs = '', status = 'pending') { return rpc('admin_candidates', { p_q: qs, p_status: status }); },
       async ignore(name, on = true) { await rpc('admin_candidate_ignore', { p_name: name, p_ignore: !!on }); },
+      async import(rows, link = true) { return rpc('admin_artists_import', { p_rows: rows, p_link: !!link }); },   // 한 번에 등록 (R-141, 베타 전용)
       async uploadPhoto(file) {
         if (!/^image\/(jpeg|png|webp)$/.test(file.type)) fail('validation', 'JPG·PNG·WEBP 이미지만 올릴 수 있어요.'); if (file.size > 2 * 1024 * 1024) fail('validation', '2MB 이하 이미지만 올릴 수 있어요.');
         const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${file.type.split('/')[1].replace('jpeg', 'jpg')}`;
@@ -185,10 +193,11 @@ export function createSupabaseBackend(cfg) {
     performances: {
       async list() { return (await q(sb.from('performances').select(PERF_SEL).order('start_date', { ascending: false }).limit(2000))).map(toPerf); },
       async save(p) { const row = fromPerf(p); if (!row.id) { delete row.id; row.created_by = uid(); row.artists_locked = true; } row.updated_by = uid(); return toPerf(await save('performances', row)); },
-      async hide(id, hidden = true) { return toPerf(await save('performances', { id, is_hidden: !!hidden })); }
+      async hide(id, hidden = true) { return toPerf(await save('performances', { id, is_hidden: !!hidden })); },
+      async unlock(id) { return toPerf(await save('performances', { id, locked_fields: [], artists_locked: false })); }   // KOPIS 값으로 되돌리기
     },
     kopis: {
-      async runs() { return (await q(sb.from('kopis_sync_runs').select('*').order('started_at', { ascending: false }).limit(7))).map(r => ({ id: r.id, startedAt: r.started_at, finishedAt: r.finished_at, status: r.status, listCount: r.list_count, detailCount: r.detail_count, remainingDetails: r.remaining_details, error: r.error, trigger: r.trigger })); },
+      async runs() { return (await q(sb.from('kopis_sync_runs').select('*').order('started_at', { ascending: false }).limit(7))).map(r => ({ id: r.id, startedAt: r.started_at, finishedAt: r.finished_at, status: r.status, listCount: r.list_count, detailCount: r.detail_count, remainingDetails: r.remaining_details, error: r.error, trigger: r.trigger, mode: r.mode || 'full', afterDate: r.after_date || null })); },
       async resync() { const { data, error } = await sb.functions.invoke('kopis-sync', { body: { trigger: 'admin' } }); if (error) fail('server', 'KOPIS 수집을 시작하지 못했어요.'); return data; }
     },
     clubVenues: {

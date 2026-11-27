@@ -3,6 +3,7 @@
 import api from '../shared/api/index.js';
 import { nameKey, kstToday } from '../shared/domain.js';
 import { artistBox, photo, emptyPhoto, perfLine, subLine, kindLabel, igLink, escA as esc } from '../shared/artist-ui.js';
+import { renderImport, importFile, importAction } from './artist-import.js';
 
 let ui = null;   // main.js가 넘겨줌: { main, head, sheet, closeSheet, toast, errMsg, fieldErr }
 export const initArtists = u => { ui = u; };
@@ -22,7 +23,7 @@ const byId = id => (A.all || []).find(a => a.id === id);
 const keysOf = a => [a.name, ...(a.aliases || [])].map(nameKey);
 const sameName = n => (A.all || []).filter(a => a.status === 'active' && keysOf(a).includes(nameKey(n)));
 const unlinked = row => (row.artists || []).filter(n => !(row.links || []).some(l => nameKey(l.name) === nameKey(n)));
-const tabs = (on, nLinks) => `<div class="adm-tools"><div class="adm-chips" role="tablist" aria-label="아티스트 화면">${[['', '등록된 아티스트'], ['candidates', '후보 검수'], ['links', `공연 연결 확인${nLinks != null ? ' ' + nLinks : ''}`]]
+const tabs = (on, nLinks) => `<div class="adm-tools"><div class="adm-chips" role="tablist" aria-label="아티스트 화면">${[['', '등록된 아티스트'], ['candidates', '후보 검수'], ['links', `공연 연결 확인${nLinks != null ? ' ' + nLinks : ''}`], ['import', '한 번에 등록 (베타)']]
   .map(([k, n]) => `<a role="tab" class="chip${on === k ? ' on' : ''}" aria-selected="${on === k}" href="#/artists${k ? '/' + k : ''}">${n}</a>`).join('')}</div></div>`;
 const upcoming = () => { const t = kstToday(); return (A.perfs || []).filter(p => !p.hidden && p.endDate >= t); };
 
@@ -32,6 +33,7 @@ export async function renderArtists(sub, id) {
   A.returnTo = ''; A.fromReport = null;
   await Promise.all([loadAll(true), loadPerfs(true)]);
   if (sub === 'candidates') return renderCandidates();
+  if (sub === 'import') return renderImport({ ui, tabsHtml: tabs('import', upcoming().filter(p => unlinked(p).length).length), all: () => A.all, reload: () => loadAll(true) });
   if (sub === 'links') return renderLinkCheck();
   return renderArtistList();
 }
@@ -256,6 +258,7 @@ export async function artistAction(act, a) {
     case 'ar-hide': try { const on = a.dataset.on === '1'; await api.admin.artists.hide(a.dataset.id, on); ui.toast(on ? '숨겼어요. 사용자 검색에 나오지 않아요.' : '숨김을 풀었어요.'); resetArtistCache(); location.hash = '#/artists'; } catch (e) { ui.toast(ui.errMsg(e)); } break;
     case 'ar-linkbox': linkBoxSheet(a.dataset.i); break;
     case 'ar-link-none': linkNone(); break;
+    case 'ar-template': case 'ar-import-paste': case 'ar-import-run': await importAction(act, a); break;
     case 'ar-link-new': A.prefill = { name: a.dataset.name }; A.returnTo = location.hash; ui.closeSheet(); location.hash = '#/artists/edit/new'; break;
   }
 }
@@ -273,6 +276,7 @@ export function artistChange(t) {
   if (t.dataset.linkKey) { if (t.checked) A.form.checked.add(t.dataset.linkKey); else A.form.checked.delete(t.dataset.linkKey); }
   if (t.name === 'kind' && t.form?.id === 'artistForm') { A.form.kind = t.value; A.form.rel.clear(); drawRel(); }
   if (t.name === 'photoFile') pickArtistPhoto(t);
+  if (t.dataset.importFile != null) importFile(t);
   if (t.name === 'mergeTo') drawMergePrev(t.value);
   if (t.name === 'linkTo') $$('#linkForm .ar-box').forEach(b => b.classList.toggle('sel', b.querySelector('input[name=linkTo]')?.checked));
 }

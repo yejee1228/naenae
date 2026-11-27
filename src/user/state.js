@@ -60,4 +60,4 @@ export async function checkNewBadge(silent) {
   sheet(`<p class="eyebrow">${Number(ym.slice(5))}월의 NEW BADGE</p><div class="medal big"><span class="emo xl" style="--c:${esc(first.color || '#d9cce6')}">${esc(first.emoji || '⭐')}</span></div><h2>${esc(first.name)}</h2><p class="small muted">${esc(first.desc)}</p>
     <a class="btn primary block" href="#/my" data-act="close-sheet">${esc(CONFIG.myName)}에서 보기</a>`);
 }
-export const notifyError = e => toast((e && e.message) || '저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+export const notifyError = e => toast((e && e.message) || '저장하지 못했습니다. 잠시 후 다시 시도해 주세요.');

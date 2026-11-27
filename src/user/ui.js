@@ -84,15 +84,15 @@ export function inAppBanner() {
   if (inApp === 'kakao') action = `<a class="btn small" data-track="inapp_escape_click" href="kakaotalk://web/openExternal?url=${encodeURIComponent(location.href)}">기본 브라우저로 열기</a>`;
   else if (isAndroid) action = `<a class="btn small" data-track="inapp_escape_click" href="intent://${esc(location.host + location.pathname + location.search)}#Intent;scheme=https;package=com.android.chrome;end">Chrome으로 열기</a>`;
   const how = (inApp === 'instagram' && !isAndroid) ? '오른쪽 위 ⋯ → “외부 브라우저에서 열기”를 눌러 주세요.' : '아래 버튼으로 기본 브라우저에서 열어 주세요.';
-  return `<div class="inapp" role="note"><b>앱 안 브라우저에서는 캘린더 추가·사진 저장이 막힐 수 있어요.</b><span>${how}</span>${action}</div>`;
+  return `<div class="inapp" role="note"><b>앱 안 브라우저에서는 캘린더 추가·사진 저장이 막힐 수 있습니다.</b><span>${how}</span>${action}</div>`;
 }
 export function footer() {
   return `<footer class="foot">
-    <p>서비스 개선을 위해 버튼 클릭 같은 익명 이용 기록을 수집해요. 사진은 서버로 보내지 않아요.</p>
+    <p>서비스 개선을 위해 버튼 클릭 같은 익명 이용 기록을 수집합니다. 사진은 서버로 보내지 않습니다.</p>
     <p>공연 일정 출처: 공연예술통합전산망(KOPIS)</p>
     <p class="foot-brand">${esc(CONFIG.serviceName)} ${esc(CONFIG.serviceNameEn)} · ${esc(CONFIG.sloganEn)} · beta ${CONFIG.version === '1.0.0' ? '1.0' : esc(CONFIG.version)}</p>
     <p class="foot-links"><a href="#/terms/tos">이용약관</a> · <a href="#/terms/privacy">개인정보 처리방침</a> · ${esc(CONFIG.operator)}</p>
-    ${api.isDemo ? '<p class="foot-demo">시연 모드 — 계정과 기록은 이 브라우저에만 저장돼요.</p>' : ''}
+    ${api.isDemo ? '<p class="foot-demo">시연 모드 — 계정과 기록은 이 브라우저에만 저장됩니다.</p>' : ''}
   </footer>`;
 }
 export function page(active, inner, opts = {}) {

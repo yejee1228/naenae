@@ -9,8 +9,8 @@ export function fromSupabase(error) {
   const msg = String(error.message || '');
   const m = msg.match(/^(unauthorized|forbidden|not_found|validation|conflict|rate_limited|server)\|(.+)$/);
   if (m) return new ApiError(m[1], m[2]);
-  if (error.code === '23505') return new ApiError('conflict', '이미 담겨 있어요.');
-  if (error.code === '42501' || /row-level security|permission denied/i.test(msg)) return new ApiError('forbidden', '권한이 없어요.');
-  if (/JWT|not authenticated/i.test(msg)) return new ApiError('unauthorized', '로그인이 필요해요.');
+  if (error.code === '23505') return new ApiError('conflict', '이미 담겨 있습니다.');
+  if (error.code === '42501' || /row-level security|permission denied/i.test(msg)) return new ApiError('forbidden', '권한이 없습니다.');
+  if (/JWT|not authenticated/i.test(msg)) return new ApiError('unauthorized', '로그인이 필요합니다.');
   return new ApiError('server', '잠시 후 다시 시도해 주세요.');
 }

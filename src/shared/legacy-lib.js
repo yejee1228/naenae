@@ -277,9 +277,9 @@
    */
   const BADGE_THRESHOLD = 3;
   const BADGE_RULES = {
-    //        대표(기록 합계) 단골(같은 공연장) 찐팬(같은 아티스트 관람) 원정러(지방 공연 | 지역 수) 장거리 원정러(지방 공연) 라이브(관람 횟수)
-    month: { primary: 3, venue: 2, fan: 2, local: 1, regions: 3, proLocal: 3, lives: 3 },
-    year:  { primary: 3, venue: 3, fan: 3, local: 2, regions: 3, proLocal: 5, lives: 12 }
+    //        대표(기록 합계) 단골(같은 공연장) 찐팬(같은 아티스트 관람) 원정러(지방 공연) 장거리 원정러(지방 공연) 라이브(관람 횟수)
+    month: { primary: 3, venue: 2, fan: 2, local: 1, proLocal: 3, lives: 3 },
+    year:  { primary: 3, venue: 3, fan: 3, local: 2, proLocal: 5, lives: 12 }
   };
   const METRO = ['서울', '경기', '인천'];
   /** 지방 공연 = 서울·경기·인천 이외 지역 (KOPIS 지역명 기준, 앞글자 비교) */
@@ -338,9 +338,8 @@
     const a = top(tally(attended.flatMap(r => [...new Set(r.artists || [])])));
     if (a && a[1] >= R.fan) res.extras.push({ id: 'fan', emoji: '💜', color: conceptOf('fan').color, name: `${a[0]} 찐팬`, desc: `${a[0]} 공연 관람 ${a[1]}회` });
     const local = rec.filter(r => isLocalRegion(r.region)).length;
-    const regions = new Set(rec.map(r => r.region).filter(Boolean)).size;
     if (local >= R.proLocal) res.extras.push({ id: 'travel', level: 'pro', emoji: '🚄', color: conceptOf('travel').proColor, name: '장거리 원정러', desc: `지방 공연 ${local}회 기록` });
-    else if (local >= R.local || regions >= R.regions) res.extras.push({ id: 'travel', level: 'basic', emoji: '🚌', color: conceptOf('travel').color, name: '원정러', desc: local ? `지방 공연 ${local}회 기록` : `${regions}개 지역 공연 기록` });
+    else if (local >= R.local) res.extras.push({ id: 'travel', level: 'basic', emoji: '🚌', color: conceptOf('travel').color, name: '원정러', desc: `지방 공연 ${local}회 기록` });   // '지역 3곳' 조건은 삭제 (결정 7, R-46)
     if (counts.attended >= R.lives) res.extras.push({ id: 'lives', emoji: '🎤', color: conceptOf('lives').color, name: `관람완료 ${counts.attended}회`, desc: `관람 완료 ${counts.attended}회` });
     res.earned = (res.primary ? 1 : 0) + res.extras.length;
     return res;

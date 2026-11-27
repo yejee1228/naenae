@@ -102,7 +102,7 @@ async function renderDashboard() {
     <a class="adm-card" href="#/promotions"><p class="eyebrow">진행 중 이벤트</p><b class="big">진행 중 ${d.promotionsLive} · 예정 ${d.promotionsSoon}</b></a>
     <a class="adm-card" href="#/performances"><p class="eyebrow">KOPIS 수집</p>${!s ? '<b class="big">아직 수집 기록이 없어요</b>'
       : failed ? `<b class="big warn">갱신 실패 — ${d.lastSuccess ? esc(fmtDT(d.lastSuccess.finishedAt || d.lastSuccess.startedAt)) + '이 마지막' : '성공 기록 없음'}</b><span class="small muted">${esc(s.error || '')}</span>`
-        : `<b class="big">마지막 갱신 ${esc(fmtDT(s.finishedAt || s.startedAt))} · ${Number(s.listCount || 0).toLocaleString('ko-KR')}건</b>`}</a>
+        : `<b class="big">마지막 갱신 ${esc(fmtDT(s.finishedAt || s.startedAt))} · ${runSize(s)}</b>`}</a>
     <a class="adm-card" href="#/members"><p class="eyebrow">회원</p><b class="big">전체 ${d.members}명 · 오늘 가입 ${d.membersToday}명</b></a>
     <section class="adm-card wide" aria-label="베타 지표"><p class="eyebrow">베타 지표 (최근 7일)</p>
       <div class="adm-metrics">${metric('visitors', '방문')}${metric('signups', '가입')}${metric('calendar_add', '캘린더 추가')}${metric('ticket_click', '예매처 이동')}${metric('attended', '관람 기록')}${metric('share_done', '인증샷 공유')}${metric('stamp_saved', '인증샷 저장')}${metric('auth_gate', '로그인 안내 본 사람')}</div>
@@ -344,7 +344,8 @@ function previewPromo() {
 
 /* ---------- ADM-05 공연 ---------- */
 const P = { list: [], filter: 'upcoming', q: '', page: 0, fromReport: null, runs: [] };
-const P_FILTERS = [['upcoming', '앞으로'], ['past', '지난 공연'], ['kopis', 'KOPIS'], ['manual', '직접 등록'], ['noArtist', '아티스트 비어 있음'], ['hidden', '숨김']];
+const P_FILTERS = [['upcoming', '앞으로'], ['past', '지난 공연'], ['kopis', 'KOPIS'], ['manual', '직접 등록'], ['noArtist', '아티스트 비어 있음'], ['edited', '운영자가 고친 KOPIS'], ['missing', 'KOPIS에서 빠짐'], ['hidden', '숨김']];
+const LOCK_NAME = { title: '공연명', start_date: '공연일', end_date: '끝나는 날', venue: '공연장', region: '지역', artists: '출연진', ticket_links: '예매처' };
 const PAGE = 50;
 async function renderPerformances() {
   [P.list, P.runs, O.list] = await Promise.all([api.admin.performances.list(), api.admin.kopis.runs(), api.admin.openings.list()]);
@@ -352,9 +353,9 @@ async function renderPerformances() {
   const last = P.runs[0]; const lastOk = P.runs.find(r => r.status === 'success');
   main().innerHTML = head('공연 관리', 'KOPIS에서 자동으로 가져온 공연과 직접 등록한 공연이에요.', '<a class="btn primary small" href="#/performances/new">공연 직접 등록</a>')
     + `<section class="adm-card adm-sync" style="margin-bottom:14px" aria-label="KOPIS 수집 상태"><div class="adm-head" style="margin:0"><div><p class="eyebrow" style="margin:0">KOPIS 수집</p>
-      ${last ? (last.status === 'failed' ? `<b class="warn">갱신 실패 — ${lastOk ? esc(fmtDT(lastOk.finishedAt || lastOk.startedAt)) + '이 마지막' : '성공 기록 없음'}</b>` : `<b>마지막 갱신 ${esc(fmtDT(last.finishedAt || last.startedAt))} · ${Number(last.listCount || 0).toLocaleString('ko-KR')}건</b>`) : '<b>아직 수집 기록이 없어요</b>'}</div>
+      ${last ? (last.status === 'failed' ? `<b class="warn">갱신 실패 — ${lastOk ? esc(fmtDT(lastOk.finishedAt || lastOk.startedAt)) + '이 마지막' : '성공 기록 없음'}</b>` : `<b>마지막 갱신 ${esc(fmtDT(last.finishedAt || last.startedAt))} · ${runSize(last)}</b>`) : '<b>아직 수집 기록이 없어요</b>'}</div>
       <button class="btn small" type="button" data-act="kopis-resync">지금 다시 수집</button></div>
-      ${P.runs.length ? `<ol>${P.runs.map(r => `<li>${esc(fmtDT(r.startedAt))} · ${r.status === 'success' ? '성공' : r.status === 'running' ? '진행 중' : '<span class="warn">실패</span>'} · 목록 ${r.listCount || 0}건 · 상세 ${r.detailCount || 0}건${r.remainingDetails ? ` (남은 상세 ${r.remainingDetails})` : ''}${r.trigger === 'admin' ? ' · 운영자 실행' : ''}${r.error ? ` — ${esc(r.error)}` : ''}</li>`).join('')}</ol>` : ''}</section>
+      ${P.runs.length ? `<ol>${P.runs.map(r => `<li>${esc(fmtDT(r.startedAt))} · ${r.status === 'success' ? '성공' : r.status === 'running' ? '진행 중' : '<span class="warn">실패</span>'} · ${r.mode === 'incremental' ? '바뀐 공연' : '전체 목록'} ${r.listCount || 0}건 · 상세 ${r.detailCount || 0}건${r.remainingDetails ? ` (남은 상세 ${r.remainingDetails})` : ''}${r.trigger === 'admin' ? ' · 운영자 실행' : ''}${r.error ? ` — ${esc(r.error)}` : ''}</li>`).join('')}</ol>` : ''}</section>
     <div class="adm-tools"><input type="search" data-search="P" placeholder="공연명·공연장·아티스트 검색" value="${esc(P.q)}" aria-label="공연 검색"><div class="adm-chips" role="group" aria-label="공연 필터">${P_FILTERS.map(([k, n]) => `<button type="button" class="chip${P.filter === k ? ' on' : ''}" data-filter="P" data-v="${k}" aria-pressed="${P.filter === k}">${n}</button>`).join('')}</div></div><div id="listWrap"></div>`;
   drawPerformances();
 }
@@ -368,6 +369,8 @@ function drawPerformances() {
     if (P.filter === 'kopis' && p.source !== 'kopis') return false;
     if (P.filter === 'manual' && p.source === 'kopis') return false;
     if (P.filter === 'noArtist' && (p.artists || []).length) return false;
+    if (P.filter === 'edited' && !(p.source === 'kopis' && (p.lockedFields || []).length)) return false;
+    if (P.filter === 'missing' && !p.kopisMissing) return false;
     return !k || nameKey(p.title).includes(k) || nameKey(p.venue).includes(k) || (p.artists || []).some(a => nameKey(a).includes(k));
   });
   rows.sort((a, b) => (P.filter === 'past' ? b.startDate.localeCompare(a.startDate) : a.startDate.localeCompare(b.startDate)) || a.title.localeCompare(b.title, 'ko'));
@@ -376,7 +379,7 @@ function drawPerformances() {
   const cols = '--cols: 80px minmax(0,2.4fr) 1fr 1.2fr 70px minmax(0,1fr)';
   $('#listWrap').innerHTML = `<p class="small muted" style="margin:0 0 8px">${total.toLocaleString('ko-KR')}건</p><div class="adm-list"><div class="adm-row head" style="${cols}"><span>출처</span><span>공연명 · 아티스트</span><span>공연일</span><span>공연장</span><span>지역</span><span>연결된 오픈 공지</span></div>
     ${rows.length ? rows.map(p => { const o = linked.get(p.id); return `<div class="adm-row click${p.hidden ? ' muted-row' : ''}" style="${cols}" data-href="#/performances/${encodeURIComponent(p.id)}" tabindex="0">
-      <span><span class="src-chip${p.source === 'kopis' ? ' kopis' : ''}">${p.source === 'kopis' ? 'KOPIS' : '직접 등록'}</span></span>
+      <span><span class="src-chip${p.source === 'kopis' ? ' kopis' : ''}">${p.source === 'kopis' ? 'KOPIS' : '직접 등록'}</span>${p.kopisMissing ? '<br><span class="src-chip warn-chip">KOPIS에서 빠짐</span>' : p.source === 'kopis' && (p.lockedFields || []).length ? '<br><span class="src-chip">운영자 수정</span>' : ''}</span>
       <span><span class="t">${esc(p.title)}</span><br><span class="sub">${(p.artists || []).length ? esc(p.artists.join(' · ')) : '<span class="warn">아티스트 비어 있음</span>'}</span></span>
       <span class="sub">${esc(fmtD(p.startDate))}${p.endDate && p.endDate !== p.startDate ? ' ~ ' + esc(fmtD(p.endDate)) : ''}</span><span class="sub">${esc(p.venue || '')}</span><span class="sub" data-m="hide">${esc(p.region || '')}</span>
       <span class="sub" data-m="hide">${o ? esc(o.title) : '-'}</span><span class="go" aria-hidden="true">›</span></div>`; }).join('') : '<p class="adm-empty">조건에 맞는 공연이 없어요.</p>'}</div>
@@ -387,17 +390,18 @@ async function renderPerformanceForm(id) {
   const fr = id === 'new' ? P.fromReport : null; if (id !== 'new') P.fromReport = null;
   const p = id === 'new' ? (fr ? { title: fr.title, artists: fr.artists || [], venue: fr.venue, startDate: fr.showDate || '', endDate: fr.showDate || '', region: '', ticketLinks: fr.ticketUrl ? [{ name: '예매처', url: fr.ticketUrl }] : [] } : { artists: [], ticketLinks: [] }) : P.list.find(x => x.id === id);
   if (!p) { main().innerHTML = '<p class="adm-empty">공연을 찾지 못했어요. <a class="link" href="#/performances">목록으로</a></p>'; return; }
-  const kopis = p.source === 'kopis'; const ro = kopis ? ' readonly' : ''; const link = (p.ticketLinks || [])[0] || {};
+  const kopis = p.source === 'kopis'; const ro = ''; const link = (p.ticketLinks || [])[0] || {};
+  const locks = (p.lockedFields || []).map(k => LOCK_NAME[k] || k);
   const suggest = kopis && !(p.artists || []).length ? extractArtists(p.title) : [];
-  main().innerHTML = head(id === 'new' ? '공연 직접 등록' : kopis ? 'KOPIS 공연 · 출연진 보정' : '공연 수정', '', '<a class="link" href="#/performances">← 목록</a>')
+  main().innerHTML = head(id === 'new' ? '공연 직접 등록' : kopis ? 'KOPIS 공연 수정' : '공연 수정', '', '<a class="link" href="#/performances">← 목록</a>')
     + (fr ? `<p class="adm-note">제보 「${esc(fr.title)}」(${esc(fr.nickname || '')})에서 가져온 내용이에요. 저장하면 제보가 '등록 완료'로 바뀌어요.</p>` : '')
-    + (kopis ? `<p class="adm-note">KOPIS에서 가져온 공연이라 출연진(아티스트)만 고칠 수 있어요. 고친 출연진은 다음 수집 때 덮어쓰지 않아요${p.artistsLocked ? ' (지금 고정됨)' : ''}.</p>` : '')
+    + (kopis ? `<p class="adm-note">KOPIS에서 가져온 공연이에요. 고친 칸은 다음 수집 때 덮어쓰지 않아요. 지우면 숨김으로 남아 다시 생기지 않아요.${locks.length ? `<br>운영자가 고친 칸: <b>${esc(locks.join(', '))}</b> <button class="link" type="button" data-act="perf-unlock" data-id="${esc(p.id)}">KOPIS 값으로 되돌리기</button>` : ''}${p.kopisMissing ? '<br><b class="warn">최근 전체 수집 때 KOPIS 목록에서 빠졌어요.</b> 취소·삭제됐을 수 있으니 확인 후 숨겨 주세요.' : ''}</p>` : '')
     + `<form class="adm-form" id="perfForm" novalidate data-id="${esc(p.id || '')}" data-kopis="${kopis ? 1 : 0}">
     <label class="full">공연명 *<input type="text" name="title" maxlength="120" value="${esc(p.title || '')}"${ro}><span class="fld-err" data-err="title"></span></label>
     <label>공연일 *<input type="date" name="startDate" value="${esc(p.startDate || '')}"${ro}><span class="fld-err" data-err="startDate"></span></label>
     <label>끝나는 날 <small>하루 공연이면 비워 두세요</small><input type="date" name="endDate" value="${esc(p.endDate && p.endDate !== p.startDate ? p.endDate : '')}"${ro}><span class="fld-err" data-err="endDate"></span></label>
     <label>공연장 *<input type="text" name="venue" maxlength="80" value="${esc(p.venue || '')}"${ro}><span class="fld-err" data-err="venue"></span></label>
-    <label>지역 *${kopis ? `<input type="text" name="region" value="${esc(p.region || '')}" readonly>` : `<select name="region"><option value="">고르기</option>${REGIONS.map(r => `<option${p.region === r ? ' selected' : ''}>${r}</option>`).join('')}</select>`}<span class="fld-err" data-err="region"></span></label>
+    <label>지역 *${`<select name="region"><option value="">고르기</option>${REGIONS.map(r => `<option${p.region === r ? ' selected' : ''}>${r}</option>`).join('')}</select>`}<span class="fld-err" data-err="region"></span></label>
     <label class="full">출연진(아티스트) <small>쉼표로 구분 — 이름마다 아래에 아티스트 박스가 생겨요. 눌러서 연결을 고를 수 있어요 (한 공연에 여러 명)</small><input type="text" name="artists" maxlength="200" value="${esc((p.artists || []).join(', '))}" data-chips="linkBoxes"><span class="adm-artist-boxes" id="linkBoxes"></span>
       ${suggest.length ? `<span class="small">공연명에서 찾은 후보: ${suggest.map(s => `<button class="link" type="button" data-act="artist-add" data-v="${esc(s)}">${esc(s)} +</button>`).join(' ')}</span>` : ''}</label>
     ${kopis && p.castRaw ? `<p class="full small muted" style="margin:0">KOPIS 출연진(참고): ${esc(p.castRaw)}</p>` : ''}
@@ -411,9 +415,8 @@ async function submitPerf(f) {
   const v = k => String(f.elements[k]?.value || '').trim(); const kopis = f.dataset.kopis === '1'; const id = f.dataset.id;
   const artists = splitList(v('artists'));
   let data;
-  if (kopis) data = { ...P.list.find(x => x.id === id), artists };
-  else {
-    data = { title: v('title'), startDate: v('startDate'), endDate: v('endDate') || v('startDate'), venue: v('venue'), region: v('region'), artists, ticketLinks: v('linkUrl') ? [{ name: v('linkName') || '예매처', url: v('linkUrl') }] : [] };
+  {
+    data = { ...(kopis ? P.list.find(x => x.id === id) : {}), title: v('title'), startDate: v('startDate'), endDate: v('endDate') || v('startDate'), venue: v('venue'), region: v('region'), artists, ticketLinks: kopis ? P.list.find(x => x.id === id)?.ticketLinks || [] : v('linkUrl') ? [{ name: v('linkName') || '예매처', url: v('linkUrl') }] : [] };
     let ok = true;
     for (const k of ['title', 'startDate', 'venue', 'region']) ok = fieldErr(f, k, data[k] ? '' : '필수 항목이에요.') && ok;
     ok = fieldErr(f, 'endDate', data.endDate < data.startDate ? '공연일보다 빠를 수 없어요.' : '') && ok;
@@ -427,6 +430,8 @@ async function submitPerf(f) {
     P.list = []; location.hash = '#/performances';
   } catch (e) { $('#formErr').textContent = errMsg(e); }
 }
+// 수집 크기: 바뀐 것만 받은 수집은 '바뀐 공연 N건', 전체는 'N건'
+const runSize = r => `${r.mode === 'incremental' ? '바뀐 공연 ' : ''}${Number(r.listCount ?? r.list_count ?? 0).toLocaleString('ko-KR')}건`;
 async function resync(btn) {
   btn.disabled = true; btn.textContent = '수집 중…';
   try { const run = await api.admin.kopis.resync(); toast(run && run.status === 'failed' ? `수집하지 못했어요: ${run.error || ''}` : '수집을 마쳤어요.'); } catch (e) { toast(errMsg(e)); }
@@ -531,6 +536,7 @@ document.addEventListener('click', async e => {
     case 'thumb-clear': E.thumb = null; $('#thumbBox').innerHTML = thumbBox(); break;
     case 'kopis-resync': resync(a); break;
     case 'page': P.page += Number(a.dataset.d); drawPerformances(); window.scrollTo(0, 0); break;
+    case 'perf-unlock': try { await api.admin.performances.unlock(a.dataset.id); toast('잠금을 풀었어요. 다음 전체 수집 때 KOPIS 값으로 돌아가요.'); P.list = []; route(); } catch (err) { toast(errMsg(err)); } break;
     case 'reveal': reveal(a.dataset.id); break;
     case 'artist-add': { const inp = $('#perfForm').elements.artists; inp.value = [...splitList(inp.value), a.dataset.v].join(', '); drawChips(inp); a.remove(); break; }
     case 'venue-hide': try { await api.admin.clubVenues.hide(a.dataset.id, a.dataset.on === '1'); toast(a.dataset.on === '1' ? '삭제했어요. 아래에서 되살릴 수 있어요.' : '되살렸어요.'); await renderVenues(); } catch (err) { toast(errMsg(err)); } break;

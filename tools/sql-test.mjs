@@ -16,7 +16,7 @@ const ok = (cond, name, extra = '') => { if (cond) pass++; else fails.push(name 
 await db.exec(`
 create role anon nologin; create role authenticated nologin; create role service_role nologin;
 create schema auth;
-create table auth.users (id uuid primary key, email text);
+create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb not null default '{}', raw_app_meta_data jsonb not null default '{}', created_at timestamptz not null default now(), email_confirmed_at timestamptz);
 create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 grant usage on schema auth to anon, authenticated;
 grant execute on function auth.uid() to anon, authenticated;
@@ -44,6 +44,33 @@ for (const w of ['admin', 'a', 'b']) await as(w, `select public.complete_profile
 await as('super', `update public.profiles set is_admin = true where id = $1`, [ID.admin]);
 ok((await err('a', `select public.complete_profile('x', 'email', $1::jsonb)`, [consents])).includes('validation'), '닉네임 2자 미만 거절');
 ok((await err('b', `select public.complete_profile('회원B', 'email', '{"age14":true}'::jsonb)`)).includes('필수 약관'), '필수 약관 없으면 거절');
+// 닉네임 중복 불가 (결정 2, R-07): 대소문자·띄어쓰기를 구분해 정확히 같은 것만 겹침
+ok((await err('b', `update public.profiles set nickname = '회원A' where id = $1`, [ID.b])).includes('이미 사용 중인 닉네임'), '닉네임 변경: 다른 회원과 겹치면 거절');
+ok((await err('b', `select public.complete_profile('회원A', 'email', $1::jsonb)`, [consents])).includes('conflict'), '가입: 겹치는 닉네임 거절');
+ok((await err('a', `update public.profiles set nickname = '회원A' where id = $1`, [ID.a])) === '', '내 닉네임 그대로 저장은 됨');
+ok((await one('anon', `select public.nickname_available('회원A') v`)).v === false, '중복확인: 쓰는 닉네임');
+ok((await one('anon', `select public.nickname_available('회원 a') v`)).v === true, '중복확인: 대소문자·띄어쓰기가 다르면 다른 닉네임');
+ok((await one('anon', `select public.nickname_available('새닉네임') v`)).v === true, '중복확인: 빈 닉네임');
+ok((await one('a', `select public.nickname_available('회원A') v`)).v === true, '내 닉네임은 사용 가능으로 봄');
+ok((await err('super', `insert into public.profiles (id, nickname, provider) values ('00000000-0000-0000-0000-0000000000cc', '회원B', 'email')`)).includes('이미 사용 중인 닉네임'), '저장소에서도 겹치는 닉네임 막음');
+// 가입하기를 먼저 누른 사람이 선점: 이메일 가입은 인증 전(24시간)에도 닉네임을 맡아 둠
+Object.assign(ID, { c: '00000000-0000-0000-0000-00000000000c', d: '00000000-0000-0000-0000-00000000000d', e: '00000000-0000-0000-0000-00000000000e' });
+await as('super', `insert into auth.users (id, email, raw_user_meta_data, raw_app_meta_data, created_at) values
+  ($1, 'carol@example.com', '{"nickname":"먼저가입"}', '{"provider":"email"}', now() - interval '1 hour'),
+  ($2, 'dave@example.com', '{"nickname":"먼저가입"}', '{"provider":"email"}', now() - interval '10 minutes'),
+  ($3, 'erin@example.com', '{"nickname":"오래된닉"}', '{"provider":"email"}', now() - interval '25 hours')`, [ID.c, ID.d, ID.e]);
+ok((await one('anon', `select public.nickname_available('먼저가입') v`)).v === false, '중복확인: 인증 대기 중인 사람이 맡아 둔 닉네임');
+ok((await one('anon', `select public.nickname_available('오래된닉') v`)).v === true, '24시간 지난 대기 가입은 닉네임을 놓음');
+ok((await err('b', `update public.profiles set nickname = '먼저가입' where id = $1`, [ID.b])).includes('이미 사용 중인 닉네임'), '맡아 둔 닉네임으로 변경 불가');
+ok((await err('d', `select public.complete_profile('먼저가입', 'email', $1::jsonb)`, [consents])).includes('이미 사용 중인 닉네임'), '나중에 누른 사람은 가입 완료 때 거절');
+ok((await err('c', `select public.complete_profile('먼저가입', 'email', $1::jsonb)`, [consents])) === '', '먼저 누른 사람은 인증 후 그 닉네임으로 가입');
+ok((await one('c', `select public.nickname_available('먼저가입') v`)).v === true, '가입 후 내 닉네임은 사용 가능으로 봄');
+// 이메일 중복확인 (R-06e)
+ok((await one('anon', `select public.email_status('ALICE@example.com') v`)).v.status === 'taken', '이메일 중복확인: 가입된 이메일 (대소문자 무시)');
+ok((await one('anon', `select public.email_status('dave@example.com') v`)).v.status === 'pending', '이메일 중복확인: 인증 대기');
+ok((await one('anon', `select public.email_status('new@example.com') v`)).v.status === 'available', '이메일 중복확인: 새 이메일');
+ok((await err('anon', `select public.nickname_holder('먼저가입', null)`)).length > 0, '선점 확인 함수는 직접 못 부름');
+await as('super', `delete from auth.users where id in ($1, $2, $3)`, [ID.c, ID.d, ID.e]);   // 뒤 테스트의 회원 수에 영향 없게
 ok((await as('super', `select count(*)::int n from public.consents where user_id = $1`, [ID.a])).rows[0].n === 4, '동의 이력 4건');
 
 // 회원 권한
@@ -64,6 +91,20 @@ await as('admin', `update public.performances set artists = '{보정된밴드}' 
 ok((await one('super', `select artists_locked from public.performances where id = $1`, [perf])).artists_locked === true, '운영자가 아티스트 고치면 잠금 (R-106)');
 ok((await one('super', `select count(*)::int n from public.admin_audit_logs where target_table = 'performances'`)).n >= 2, '운영자 작업 기록 (R-104)');
 ok((await err('a', `select * from public.admin_audit_logs`)) === '' && (await as('a', `select * from public.admin_audit_logs`)).rows.length === 0, '회원은 작업 기록 못 봄');
+
+// KOPIS 공연을 운영자가 고치거나 지웠을 때 (…03_kopis_edits)
+const kp = (await as('super', `insert into public.performances (source, kopis_id, title, start_date, end_date, venue, artists) values ('kopis', 'PF999', 'KOPIS 공연', current_date, current_date, '롤링홀', '{원래이름}') returning id`)).rows[0].id;
+await as('super', `update public.performances set title = '수집이 바꾼 제목' where id = $1`, [kp]);
+ok((await one('super', `select locked_fields from public.performances where id = $1`, [kp])).locked_fields.length === 0, '자동 수집의 수정은 잠그지 않음');
+await as('admin', `update public.performances set title = '운영자가 고친 제목', venue = '고친 공연장' where id = $1`, [kp]);
+const lk = await one('super', `select locked_fields, artists_locked from public.performances where id = $1`, [kp]);
+ok(lk.locked_fields.join() === 'title,venue' && lk.artists_locked === false, '운영자가 고친 칸만 잠금', lk.locked_fields.join());
+await as('admin', `update public.performances set locked_fields = '{}' where id = $1`, [kp]);
+ok((await one('super', `select locked_fields from public.performances where id = $1`, [kp])).locked_fields.length === 0, '되돌리기로 잠금 해제');
+await as('admin', `delete from public.performances where id = $1`, [kp]).catch(() => {});
+await as('super', `delete from public.performances where id = $1`, [kp]);
+const kd = await one('super', `select is_hidden from public.performances where id = $1`, [kp]);
+ok(kd && kd.is_hidden === true, 'KOPIS 공연을 지우면 숨김으로 남음 (다시 수집돼도 새로 안 생김)');
 
 // 기록
 await as('a', `insert into public.records (user_id, type, performance_id, title, date) values ($1, 'planned', $2, '테스트 단독 공연', current_date + 3)`, [ID.a, perf]);
@@ -141,6 +182,16 @@ ok(!!arep, '아티스트 제보 만들기');
 const areg = (await one('admin', `select public.admin_register_report($1, 'artist', '{"name":"새 아티스트","kind":"group","memberIds":[]}'::jsonb) r`, [arep])).r;
 ok(areg.report.status === 'registered' && (await one('a', `select registered_artist_id from public.reports where id = $1`, [arep])).registered_artist_id === areg.createdId, '아티스트 제보 등록 → 제보자에게 연결 (R-140)');
 ok((await err('a', `select public.link_interests($1)`, [band.id])).includes('permission denied'), '회원은 내부 연결 함수 못 부름');
+// 한 번에 등록 (엑셀·CSV, R-141)
+const ip = (await as('admin', `insert into public.performances (source, title, start_date, end_date, artists) values ('manual', '가져온밴드 단독', current_date + 2, current_date + 2, '{가져온밴드}') returning id`)).rows[0].id;
+ok((await err('a', `select public.admin_artists_import('[]'::jsonb)`)).includes('forbidden'), '회원은 한 번에 등록 못 함');
+const imp = (await one('admin', `select public.admin_artists_import($1::jsonb) r`, [JSON.stringify([
+  { name: '가져온솔로', kind: 'solo', groupName: '가져온밴드' }, { name: '가져온밴드', kind: 'group', aliases: ['GB'] },
+  { name: '테스트밴드', kind: 'group' }, { name: '테스트 밴드', kind: 'group', disambig: '' }, { name: 'x', kind: 'group', instagram: 'https://bad' }])])).r;
+const st = Object.fromEntries(imp.results.map(x => [x.row, x.status]));
+ok(st[1] === 'created' && st[2] === 'created' && st[3] === 'skipped' && st[4] === 'skipped' && st[5] === 'error', '한 번에 등록: 새로·건너뜀·오류 줄별 결과', JSON.stringify(imp.results));
+ok(imp.linked >= 1 && (await as('anon', `select 1 from public.performance_artists where performance_id = $1`, [ip])).rows.length === 1, '등록하면서 이름이 같은 공연에 자동 연결');
+ok((await one('anon', `select public.search_artists('가져온솔로') r`)).r[0]?.groups?.[0]?.name === '가져온밴드', '개인의 소속 그룹을 이름으로 연결 (그룹 먼저 등록)');
 
 // 운영자 화면
 ok((await err('a', `select public.admin_dashboard()`)).includes('forbidden'), '회원은 대시보드 못 봄');

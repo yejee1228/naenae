@@ -2,14 +2,14 @@
 import '../shared/style.css';
 import api from '../shared/api/index.js';
 import { L } from '../shared/lib.js';
-import { $, sheet, closeSheet, toast, track, store, errMsg, app } from './ui.js';
+import { $, sheet, closeSheet, toast, track, store, errMsg, app, esc } from './ui.js';
 import { S, loadContent, loadMine, visibleOpenings, perfById, checkNewBadge, notifyError, today, interestByName } from './state.js';
-import { renderOpen, calendarSheet, downloadICS, plannedForOpening } from './views/open.js';
+import { renderOpen, renderOpeningDetail, calendarSheet, downloadICS, plannedForOpening } from './views/open.js';
 import { renderSchedule, renderPerf } from './views/schedule.js';
 import { renderReco, hexSheet } from './views/reco.js';
 import { renderEvents, renderEventDetail } from './views/events.js';
 import { renderMy, renderBadgeGuide, renderStamp, stampAction, editSheet } from './views/my.js';
-import { renderLogin, renderSignup, renderSocialProfile, renderSettings, renderTerms, loginSheet, requireLogin, takePending, submitAuth, submitProfile, passwordResetSheet, nicknameSheet, withdrawSheet } from './views/account.js';
+import { renderLogin, renderSignup, renderSocialProfile, renderSettings, renderTerms, loginSheet, requireLogin, takePending, submitAuth, submitProfile, passwordResetSheet, nicknameSheet, withdrawSheet, fieldAction } from './views/account.js';
 import { renderReport, renderMyReports, submitReport, reportAction, cancelReport, setArtistPrefill, reportFormAction } from './views/report.js';
 import { drawScheduleArtists } from './views/artists.js';
 import { myArtistsAction } from './views/my.js';
@@ -28,6 +28,7 @@ async function route(keep) {
   switch (view) {
     case 'schedule': renderSchedule(); break;
     case 'perf': renderPerf(id); break;
+    case 'opening': renderOpeningDetail(id); break;
     case 'reco': renderReco(); break;
     case 'event': id ? renderEventDetail(id) : renderEvents(); break;
     case 'my': renderMy(['planned', 'attended', 'artists'].includes(id) ? id : null); break;
@@ -54,25 +55,25 @@ async function doAction(act, d, resumed) {
       const p = act === 'plan-perf' ? perfById(d.id) : null;
       if (!o && !p) return;
       const ex = o ? plannedForOpening(o) : S.records.find(r => r.type === 'planned' && r.performanceId === p.id);
-      if (ex) { if (resumed) { toast('이미 보고 싶은 공연에 있어요.'); return; } await api.records.unplan(ex.id); S.records = S.records.filter(r => r.id !== ex.id); track('record_remove', { item: ex.performanceId || ex.openingId, value: 'planned' }); toast('보고 싶은 공연에서 뺐어요.'); }
+      if (ex) { if (resumed) { toast('이미 보고 싶은 공연에 있습니다.'); return; } await api.records.unplan(ex.id); S.records = S.records.filter(r => r.id !== ex.id); track('record_remove', { item: ex.performanceId || ex.openingId, value: 'planned' }); toast('보고 싶은 공연에서 뺐습니다.'); }
       else {
         const ref = o ? (o.performanceId && perfById(o.performanceId) ? { performanceId: o.performanceId } : { openingId: o.id }) : { performanceId: p.id };   // R-17
-        const rec = await api.records.plan(ref); S.records.push(rec); track('planned_add', { item: ref.performanceId || ref.openingId, value: o ? 'opening' : 'perf' }); toast('보고 싶은 공연에 담았어요.');
+        const rec = await api.records.plan(ref); S.records.push(rec); track('planned_add', { item: ref.performanceId || ref.openingId, value: o ? 'opening' : 'perf' }); toast('보고 싶은 공연에 담았습니다.');
       }
     } else if (act === 'attend-perf') {
       const r = await api.records.attend({ performanceId: d.id, date: d.date });
       S.records = S.records.filter(x => x.id !== r.removedPlannedId); S.records.push(r.record);
-      track('attended_add', { item: d.id, value: 'perf' }); toast('관람 기록을 남겼어요. 인증샷도 만들어 보세요!');   // R-33: 따로 안내 안 함
+      track('attended_add', { item: d.id, value: 'perf' }); toast('관람 기록을 남겼습니다. 인증샷도 만들어 보세요!');   // R-33: 따로 안내 안 함
     } else if (act === 'interest' || act === 'interest-artist') {   // R-129: 아티스트가 있으면 ID로, 없으면 이름으로
       const hit = act === 'interest-artist' ? S.interests.find(i => i.artistId === d.id) : interestByName(d.name);
       if (hit) {
-        if (resumed) { toast('이미 관심 아티스트예요.'); return; }
+        if (resumed) { toast('이미 관심 아티스트입니다.'); return; }
         await api.interests.remove(hit.artistId ? { artistId: hit.artistId } : { name: hit.name }); S.interests = await api.interests.list();
         track('artist_uninterest', { item: d.name, value: d.from }); toast(`${d.name} 관심 해제`);
       } else {
         const ref = act === 'interest-artist' ? { artistId: d.id, name: d.name } : { name: d.name };
-        await api.interests.add(ref, d.from === 'perf' ? 'perf' : act === 'interest-artist' ? 'search' : 'manual'); S.interests = await api.interests.list();
-        track('artist_interest', { item: d.name, value: d.from }); toast(`${d.name}을(를) 관심 아티스트에 담았어요.`);
+        await api.interests.add(ref, ['perf', 'opening'].includes(d.from) ? d.from : act === 'interest-artist' ? 'search' : 'manual'); S.interests = await api.interests.list();
+        track('artist_interest', { item: d.name, value: d.from }); toast(`${d.name}을(를) 관심 아티스트에 담았습니다.`);
       }
     } else if (act === 'report-open') { track('report_open', { value: d.from }); location.hash = '#/report'; return; }
     else if (act === 'report-artist') { track('report_open', { value: 'artist' }); setArtistPrefill(d.name || ''); if (location.hash === '#/report/artist') rerender(); else location.hash = '#/report/artist'; return; }
@@ -95,6 +96,8 @@ async function afterLogin(how) {
 document.addEventListener('click', async e => {
   const t = e.target.closest('[data-track]');
   if (t) track(t.dataset.track, { item: t.dataset.item || '', value: t.dataset.value || '' });
+  const card = e.target.closest('.op[data-href]');   // 오픈 공지 박스를 누르면 상세 (버튼·링크 제외)
+  if (card && !e.target.closest('a, button, input, label, select')) { location.hash = card.dataset.href; return; }
   const a = e.target.closest('[data-act]'); if (!a) return;
   const act = a.dataset.act; const id = a.dataset.id;
   if (GATED.includes(act)) {
@@ -117,10 +120,16 @@ document.addEventListener('click', async e => {
       case 'login-sheet': loginSheet(a.dataset.ctx || 'my'); break;
       case 'badge-scope': S.badgeScope = a.dataset.v; track('badge_scope', { value: S.badgeScope }); rerender(); break;
       case 'badge-move': { const next = L.shiftMonth(S.badgeMonth, Number(a.dataset.v)); S.badgeMonth = next > today().slice(0, 7) ? today().slice(0, 7) : next; rerender(); break; }
-      case 'to-attended': { const r = await api.records.toAttended(id); S.records = S.records.map(x => (x.id === id ? r.record : x)); track('attended_add', { item: r.record.performanceId || 'manual', value: 'from_planned' }); toast('관람 완료로 옮겼어요.'); await checkNewBadge(); rerender(); break; }
-      case 'remove-rec': {   // R-39: 확인 창 없이 삭제 + 5초 되돌리기
-        const r = S.records.find(x => x.id === id); await api.records.remove(id); S.records = S.records.filter(x => x.id !== id); track('record_remove', { item: r?.performanceId || 'manual', value: r?.type }); rerender();
-        toast('삭제했어요', { label: '되돌리기', onClick: async () => { try { const back = await api.records.restore(id); S.records.push(back); track('record_restore'); rerender(); } catch (er) { notifyError(er); } } });
+      case 'to-attended': { const r = await api.records.toAttended(id); S.records = S.records.map(x => (x.id === id ? r.record : x)); track('attended_add', { item: r.record.performanceId || 'manual', value: 'from_planned' }); toast('관람 완료로 옮겼습니다.'); await checkNewBadge(); rerender(); break; }
+      case 'remove-rec': {   // R-39: 삭제 전에 확인 창 (결정 15 회신)
+        const r = S.records.find(x => x.id === id); if (!r) break;
+        sheet(`<p class="eyebrow">DELETE</p><h2>이 기록을 삭제하시겠습니까?</h2><p class="small muted"><b>${esc(r.title || '')}</b>${r.date ? ' · ' + esc(L.fmtDayKo(r.date)) : ''}<br>삭제하면 되돌릴 수 없습니다.</p>
+          <button class="btn block danger-btn" type="button" data-act="remove-rec-ok" data-id="${esc(id)}">삭제</button>`);
+        break;
+      }
+      case 'remove-rec-ok': {
+        const r = S.records.find(x => x.id === id); a.disabled = true;
+        await api.records.remove(id); closeSheet(); S.records = S.records.filter(x => x.id !== id); track('record_remove', { item: r?.performanceId || 'manual', value: r?.type }); rerender(); toast('삭제했습니다.');
         break;
       }
       case 'edit-rec': { const r = S.records.find(x => x.id === id); if (r) editSheet(r); break; }
@@ -129,16 +138,17 @@ document.addEventListener('click', async e => {
         const v = a.dataset.v; track(a.dataset.ctx === 'signup' ? 'signup_attempt' : 'login_attempt', { value: v, item: a.dataset.ctx });
         const r = await api.auth.signInSocial(v);
         if (r.redirected) return;                         // 서버 모드: 소셜 로그인 창으로 이동 → 돌아오면 init에서 이어서
-        if (r.needsProfile) { closeSheet(); location.hash = '#/signup/social'; } else { toast('로그인했어요.'); afterLogin(v); }
+        if (r.needsProfile) { closeSheet(); location.hash = '#/signup/social'; } else { toast('로그인했습니다.'); afterLogin(v); }
         break;
       }
       case 'profile-cancel': api.auth.cancelProfile(); store.set('nae_pending', null); location.hash = '#/open'; break;   // R-03a
       case 'auth-find': passwordResetSheet(); break;
       case 'nick-edit': nicknameSheet(); break;
-      case 'logout': await api.auth.signOut(); track('logout'); await loadMine(); toast('로그아웃했어요.'); location.hash = '#/open'; break;
+      case 'pw-eye': case 'check-email': case 'check-nick': await fieldAction(act, a); break;   // R-06d·06e·07
+      case 'logout': await api.auth.signOut(); track('logout'); await loadMine(); toast('로그아웃했습니다.'); location.hash = '#/open'; break;
       case 'withdraw': withdrawSheet(); break;
-      case 'withdraw-confirm': await api.auth.withdraw(); closeSheet(); await loadMine(); toast('탈퇴했어요. 그동안 고마웠어요.'); location.hash = '#/open'; break;
-      case 'demo-reset': if (api.resetDemo) { api.resetDemo(); await loadContent(); await loadMine(); toast('시연 데이터를 처음으로 돌렸어요.'); location.hash = '#/open'; } break;
+      case 'withdraw-confirm': await api.auth.withdraw(); closeSheet(); await loadMine(); toast('탈퇴했습니다. 그동안 감사했습니다.'); location.hash = '#/open'; break;
+      case 'demo-reset': if (api.resetDemo) { api.resetDemo(); await loadContent(); await loadMine(); toast('시연 데이터를 처음으로 돌렸습니다.'); location.hash = '#/open'; } break;
       case 'report-reason': case 'report-detail': case 'report-retry': closeSheet(); reportAction(act, id); break;
       case 'report-cancel': cancelReport(id); break;
       case 'artist-schedule': S.sched.q = a.dataset.name || ''; S.sched.past = false; track('artist_schedule', { item: S.sched.q }); if (location.hash.startsWith('#/schedule')) route(true); else location.hash = '#/schedule'; break;
@@ -161,14 +171,14 @@ document.addEventListener('submit', async e => {
     else if (id === 'manualForm') {
       const d = new FormData(f);
       const rec = await api.records.createManual({ type: d.get('type'), title: String(d.get('title') || '').trim(), date: d.get('date'), venue: String(d.get('venue') || '').trim(), region: d.get('region') || '', artists: String(d.get('artists') || '').split(/[,·/]/).map(s => s.trim()).filter(Boolean) });
-      S.records.push(rec); track('attended_add', { item: 'manual', value: 'manual' }); toast('기록했어요.'); S.myTab = rec.type; await checkNewBadge(); renderMy();
+      S.records.push(rec); track('attended_add', { item: 'manual', value: 'manual' }); toast('기록했습니다.'); S.myTab = rec.type; await checkNewBadge(); renderMy();
     } else if (id === 'editForm') {
       const d = new FormData(f); const patch = { date: d.get('date') };
       if (d.has('venue')) Object.assign(patch, { venue: String(d.get('venue') || '').trim(), region: d.get('region') || '', artists: String(d.get('artists') || '').split(/[,·/]/).map(s => s.trim()).filter(Boolean) });
-      const r = await api.records.update(f.dataset.id, patch); S.records = S.records.map(x => (x.id === r.id ? r : x)); track('record_edit'); closeSheet(); toast('수정했어요.'); rerender();
+      const r = await api.records.update(f.dataset.id, patch); S.records = S.records.map(x => (x.id === r.id ? r : x)); track('record_edit'); closeSheet(); toast('수정했습니다.'); rerender();
     } else if (id === 'nickForm') {
-      try { await api.auth.updateNickname(String(new FormData(f).get('nickname') || '').trim()); closeSheet(); toast('닉네임을 바꿨어요.'); rerender(); } catch (er) { $('#nickErr').textContent = errMsg(er); }
-    } else if (id === 'resetForm') { await api.auth.sendPasswordReset(String(new FormData(f).get('email') || '').trim()); closeSheet(); toast('메일을 보냈어요. 메일의 링크로 새 비밀번호를 정해 주세요.'); }
+      try { await api.auth.updateNickname(String(new FormData(f).get('nickname') || '').trim()); closeSheet(); toast('닉네임을 바꿨습니다.'); rerender(); } catch (er) { $('#nickErr').textContent = errMsg(er); }
+    } else if (id === 'resetForm') { await api.auth.sendPasswordReset(String(new FormData(f).get('email') || '').trim()); closeSheet(); toast('메일을 보냈습니다. 메일의 링크로 새 비밀번호를 정해 주세요.'); }
   } catch (er) { notifyError(er); }
 });
 

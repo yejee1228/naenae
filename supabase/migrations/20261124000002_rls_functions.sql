@@ -104,7 +104,7 @@ create or replace function public.complete_profile(p_nickname text, p_provider t
 returns public.profiles language plpgsql security definer set search_path = public as $$
 declare p public.profiles;
 begin
-  if auth.uid() is null then perform public.fail('unauthorized', '로그인이 필요해요.'); end if;
+  if auth.uid() is null then perform public.fail('unauthorized', '로그인이 필요합니다.'); end if;
   if char_length(trim(coalesce(p_nickname, ''))) not between 2 and 12 then perform public.fail('validation', '닉네임은 2~12자로 입력해 주세요.'); end if;
   if not (coalesce((p_consents->>'age14')::boolean, false) and coalesce((p_consents->>'terms')::boolean, false) and coalesce((p_consents->>'privacy')::boolean, false)) then
     perform public.fail('validation', '필수 약관에 동의해 주세요.');
@@ -122,7 +122,7 @@ end $$;
 create or replace function public.set_marketing(p_agreed boolean) returns void
 language plpgsql security definer set search_path = public as $$
 begin
-  if auth.uid() is null then perform public.fail('unauthorized', '로그인이 필요해요.'); end if;
+  if auth.uid() is null then perform public.fail('unauthorized', '로그인이 필요합니다.'); end if;
   update public.profiles set marketing_opt_in = p_agreed where id = auth.uid();
   insert into public.consents (user_id, kind, agreed) values (auth.uid(), 'marketing', p_agreed);
 end $$;
@@ -131,8 +131,8 @@ end $$;
 create or replace function public.withdraw() returns void
 language plpgsql security definer set search_path = public, auth as $$
 begin
-  if auth.uid() is null then perform public.fail('unauthorized', '로그인이 필요해요.'); end if;
-  if public.is_admin() then perform public.fail('forbidden', '운영자 계정은 탈퇴할 수 없어요.'); end if;
+  if auth.uid() is null then perform public.fail('unauthorized', '로그인이 필요합니다.'); end if;
+  if public.is_admin() then perform public.fail('forbidden', '운영자 계정은 탈퇴할 수 없습니다.'); end if;
   delete from auth.users where id = auth.uid();
 end $$;
 
@@ -142,21 +142,21 @@ create or replace function public.attend(p_performance_id uuid, p_date date, p_r
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare pf public.performances; src public.records; rec public.records; removed uuid; today date := (now() at time zone 'Asia/Seoul')::date;
 begin
-  if auth.uid() is null then perform public.fail('unauthorized', '로그인이 필요해요.'); end if;
+  if auth.uid() is null then perform public.fail('unauthorized', '로그인이 필요합니다.'); end if;
   if p_record_id is not null then                                  -- 보고 싶은 공연 → 관람 완료로
     select * into src from public.records where id = p_record_id and user_id = auth.uid() and deleted_at is null;
-    if not found then perform public.fail('not_found', '기록을 찾지 못했어요.'); end if;
-    if src.date is null or src.date > today then perform public.fail('validation', '공연이 끝난 뒤에 관람 완료로 옮길 수 있어요.'); end if;
+    if not found then perform public.fail('not_found', '기록을 찾지 못했습니다.'); end if;
+    if src.date is null or src.date > today then perform public.fail('validation', '공연이 끝난 뒤에 관람 완료로 옮길 수 있습니다.'); end if;
     update public.records set type = 'attended', created_at = now() where id = src.id returning * into rec;
     return jsonb_build_object('record', to_jsonb(rec), 'removedPlannedId', null);
   end if;
   select * into pf from public.performances where id = p_performance_id and not is_hidden;
-  if not found then perform public.fail('not_found', '공연 정보를 찾지 못했어요.'); end if;
+  if not found then perform public.fail('not_found', '공연 정보를 찾지 못했습니다.'); end if;
   if p_date is null or p_date < pf.start_date or p_date > pf.end_date or p_date > today then
     perform public.fail('validation', '공연 기간 안의 지난 날짜를 골라 주세요.');
   end if;
   if exists (select 1 from public.records where user_id = auth.uid() and type = 'attended' and performance_id = pf.id and date = p_date and deleted_at is null) then
-    perform public.fail('conflict', '이미 관람 기록이 있어요.');
+    perform public.fail('conflict', '이미 관람 기록이 있습니다.');
   end if;
   insert into public.records (user_id, type, performance_id, title, date, venue, region, artists)
   values (auth.uid(), 'attended', pf.id, pf.title, p_date, pf.venue, pf.region, pf.artists) returning * into rec;
@@ -189,14 +189,14 @@ begin
   insert into public.report_status_logs (report_id, from_status, to_status, actor_id) values (r.id, null, 'submitted', auth.uid());
   return r;
 exception when check_violation then
-  perform public.fail('validation', '공연 날짜, 오픈 일시, 링크 중 하나는 알려 주세요. 링크는 https:// 로 시작해야 해요.');
+  perform public.fail('validation', '공연 날짜, 오픈 일시, 링크 중 하나는 알려 주세요. 링크는 https:// 로 시작해야 합니다.');
 end $$;
 
 create or replace function public.cancel_report(p_id uuid) returns void
 language plpgsql security definer set search_path = public as $$
 begin
   update public.reports set status = 'canceled' where id = p_id and user_id = auth.uid() and status = 'submitted';
-  if not found then perform public.fail('conflict', '이미 확인 중인 제보는 취소할 수 없어요.'); end if;   -- R-75
+  if not found then perform public.fail('conflict', '이미 확인 중인 제보는 취소할 수 없습니다.'); end if;   -- R-75
   insert into public.report_status_logs (report_id, from_status, to_status, actor_id) values (p_id, 'submitted', 'canceled', auth.uid());
 end $$;
 

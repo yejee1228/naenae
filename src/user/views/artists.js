@@ -19,10 +19,10 @@ export function artistCard(c, { mine = false, from = 'search' } = {}) {
 }
 /* 이름으로만 담아 둔 관심 아티스트 (이전 데이터, R-135) */
 export const pendingCard = i => `<article class="ar-card muted"><span class="ar-main">${photo({ id: i.name, name: '?' })}
-  <span class="ar-body"><span class="ar-name"><b>${esc(i.name)}</b><em>등록 요청 중</em></span><small>운영자가 확인하면 자동으로 연결돼요</small></span></span>
+  <span class="ar-body"><span class="ar-name"><b>${esc(i.name)}</b><em>등록 요청 중</em></span><small>운영자가 확인하면 자동으로 연결됩니다</small></span></span>
   <span class="ar-side"><span class="ar-icons"><button type="button" class="ar-ic heart on" data-act="interest" data-name="${esc(i.name)}" data-from="my" aria-pressed="true" aria-label="관심 아티스트에서 빼기">♥</button></span></span></article>`;
 
-export const reportArtistCta = q => `<a class="report-cta" href="#/report/artist" data-act="report-artist" data-name="${esc(q || '')}"><span><b>찾는 아티스트가 없나요?</b><small>아티스트를 제보해 주세요. 확인 후 등록해 드려요.</small></span><i aria-hidden="true">›</i></a>`;
+export const reportArtistCta = q => `<a class="report-cta" href="#/report/artist" data-act="report-artist" data-name="${esc(q || '')}"><span><b>찾는 아티스트가 없습니까?</b><small>아티스트를 제보해 주세요. 확인 후 등록해 드립니다.</small></span><i aria-hidden="true">›</i></a>`;
 
 /* 검색: 입력이 멈추고 0.25초 뒤, 같은 검색어는 다시 부르지 않음 */
 const cache = new Map(); let timer = null; let seq = 0;

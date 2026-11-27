@@ -137,24 +137,24 @@ export function hexagon(records, interests) {
 export const hexSummary = (hex, badgeName) => {
   if (hex.empty || !hex.top.length) return '';
   const axes = hex.top.map(a => a.name).join(' · ');
-  return badgeName ? `${axes}이 높은 ${badgeName} 타입이에요` : `${axes}이 높아요`;
+  return badgeName ? `${axes}이 높은 ${badgeName} 타입입니다` : `${axes}이 높습니다`;
 };
 
 /* ---------- 제보 (R-71) ---------- */
 export const REPORT_STATUS = {
-  submitted: { label: '제보 완료', badge: 'tba', line: '운영자 확인을 기다리고 있어요.' },
-  reviewing: { label: '확인 중', badge: 'soon', line: '운영자가 확인하고 있어요.' },
+  submitted: { label: '제보 완료', badge: 'tba', line: '운영자 확인을 기다리고 있습니다.' },
+  reviewing: { label: '확인 중', badge: 'soon', line: '운영자가 확인하고 있습니다.' },
   registered: { label: '등록 완료', badge: 'open', line: '' },
-  rejected: { label: '등록 실패', badge: 'fail', line: '등록하지 못했어요.' },
-  canceled: { label: '취소됨', badge: 'tba', line: '제보를 취소했어요.' }
+  rejected: { label: '등록 실패', badge: 'fail', line: '등록하지 못했습니다.' },
+  canceled: { label: '취소됨', badge: 'tba', line: '제보를 취소했습니다.' }
 };
-export const REJECT_REASONS = ['이미 등록된 공연이에요', '정보를 확인할 수 없어요', '대중음악 공연이 아니에요'];
+export const REJECT_REASONS = ['이미 등록된 공연입니다', '정보를 확인할 수 없습니다', '대중음악 공연이 아닙니다'];
 export function validateReport(r) {
   const v = k => String(r?.[k] ?? '').trim();
   if (!v('title')) return '공연명을 입력해 주세요.';
   if (!v('showDate') && !v('openAtText') && !v('ticketUrl') && !v('sourceUrl')) return '공연 날짜, 오픈 일시, 링크 중 하나는 알려 주세요.';
   if ((v('ticketUrl') && !/^https?:\/\//.test(v('ticketUrl'))) || (v('sourceUrl') && !/^https?:\/\//.test(v('sourceUrl')))) return '링크는 https:// 로 시작하는 주소로 넣어 주세요.';
-  if (v('note').length > 300) return '메모는 300자까지 쓸 수 있어요.';
+  if (v('note').length > 300) return '메모는 300자까지 쓸 수 있습니다.';
   return '';
 }
 

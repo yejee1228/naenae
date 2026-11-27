@@ -50,22 +50,32 @@ export function renderSchedule() {
     drawScheduleArtists(s.q);
     const t = today(); const groups = new Map(); list.forEach(p => { const d = groupDay(p, t); (groups.get(d) || groups.set(d, []).get(d)).push(p); });
     $('#pfList').innerHTML = list.length ? [...groups].map(([d, ps]) => `<section class="pf-group"><h3>${esc(L.fmtDayKo(d))}</h3>${ps.map(p => perfRow(p)).join('')}</section>`).join('')
-      : `<div class="empty">${S.perfs.some(p => p.endDate >= today()) ? '조건에 맞는 공연이 없어요.' : '아직 앞으로의 공연 일정이 없어요.<br><button class="link" type="button" data-act="show-past">지난 공연 보기</button>'}</div>`;
+      : `<div class="empty">${S.perfs.some(p => p.endDate >= today()) ? '조건에 맞는 공연이 없습니다.' : '아직 앞으로의 공연 일정이 없습니다.<br><button class="link" type="button" data-act="show-past">지난 공연 보기</button>'}</div>`;
   };
   $('#q').addEventListener('input', draw);
   ['#region', '#club', '#past'].forEach(sel => $(sel).addEventListener('change', () => { draw(); track('schedule_filter', { value: sel.slice(1) }); }));
   draw();
 }
+/* 출연 아티스트 칩 (공연 상세·오픈 공지 상세): 아티스트가 연결돼 있으면 ID로 담음 (R-129), 아니면 이름으로 */
+export function artistChips(item, from) {
+  const user = api.auth.current(); const artists = item.artists || [];
+  if (!artists.length) return '<p class="op-note">아티스트 정보가 없습니다.</p>';
+  return `<div class="chips">${artists.map(a => {
+    const link = (item.links || []).find(l => nameKey(l.name) === nameKey(a));
+    const on = user && (link ? isArtistOn(link.artistId) : isInterested(a));
+    return link ? `<button type="button" class="chip ${on ? 'on' : ''}" data-act="interest-artist" data-id="${esc(link.artistId)}" data-name="${esc(a)}" data-from="${from}" aria-pressed="${!!on}">${on ? '♥' : '♡'} ${esc(a)}</button>`
+      : `<button type="button" class="chip ${on ? 'on' : ''}" data-act="interest" data-name="${esc(a)}" data-from="${from}" aria-pressed="${!!on}">${on ? '♥' : '♡'} ${esc(a)}</button>`;
+  }).join('')}</div>`;
+}
 export function renderPerf(id) {
   const p = perfById(id);
-  if (!p) { page('schedule', '<div class="empty">공연 정보를 찾지 못했어요.</div>', { back: '#/schedule' }); return; }
+  if (!p) { page('schedule', '<div class="empty">공연 정보를 찾지 못했습니다.</div>', { back: '#/schedule' }); return; }
   track('perf_view', { item: p.id });
   const op = openingByPerf(p.id);
   const user = api.auth.current();
   const planned = S.records.find(r => r.type === 'planned' && r.performanceId === p.id);
   const attended = S.records.filter(r => r.type === 'attended' && r.performanceId === p.id);
   const t = today(); const canAttend = p.startDate <= t; const maxDay = p.endDate < t ? p.endDate : t;
-  const artists = p.artists || [];
   page('schedule', `<section class="detail">
     <p class="eyebrow">${esc(p.region || '')} · ${p.source === 'kopis' ? 'KOPIS' : p.sample ? '예시' : '직접 등록'}</p>
     <h1>${esc(p.title)}</h1>
@@ -74,17 +84,12 @@ export function renderPerf(id) {
     ${op ? `<div class="op-list">${openingCard(op, 'perf')}</div>` : ''}
     ${p.ticketLinks.filter(l => L.safeURL(l.url)).length ? `<div class="links">${p.ticketLinks.filter(l => L.safeURL(l.url)).map(l => `<a class="btn small ghost" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" data-track="ticket_link_click" data-item="${esc(p.id)}" data-value="${esc(l.name)}">${esc(l.name)} ↗</a>`).join('')}</div>` : '<p class="op-note">예매처 정보 없음</p>'}
     <h2 class="sub">출연 아티스트</h2>
-    ${artists.length ? `<div class="chips">${artists.map(a => {   // 아티스트가 연결돼 있으면 ID로 담음 (R-129), 아니면 이름으로
-      const link = (p.links || []).find(l => nameKey(l.name) === nameKey(a));
-      const on = user && (link ? isArtistOn(link.artistId) : isInterested(a));
-      return link ? `<button type="button" class="chip ${on ? 'on' : ''}" data-act="interest-artist" data-id="${esc(link.artistId)}" data-name="${esc(a)}" data-from="perf" aria-pressed="${!!on}">${on ? '♥' : '♡'} ${esc(a)}</button>`
-        : `<button type="button" class="chip ${on ? 'on' : ''}" data-act="interest" data-name="${esc(a)}" data-from="perf" aria-pressed="${!!on}">${on ? '♥' : '♡'} ${esc(a)}</button>`;
-    }).join('')}</div>` : '<p class="op-note">아티스트 정보가 없어요.</p>'}
+    ${artistChips(p, 'perf')}
     ${p.castRaw ? `<p class="op-note">KOPIS 출연진: ${esc(p.castRaw)}</p>` : ''}
     <h2 class="sub">${esc(CONFIG.myName)}에 기록</h2>
     <div class="rec-box">
-      <button class="btn block ${planned ? 'on' : ''}" type="button" data-act="plan-perf" data-id="${esc(p.id)}" aria-pressed="${!!planned}">${planned ? '♥ 보고 싶은 공연에 있어요' : '♡ 보고 싶어요'}</button>
-      ${canAttend ? `<div class="attend-row"><input type="date" id="attDate" value="${maxDay}" min="${p.startDate}" max="${maxDay}" aria-label="관람 날짜"><button class="btn primary" type="button" data-act="attend-perf" data-id="${esc(p.id)}">✓ 관람했어요</button></div>` : '<p class="op-note">공연이 시작되면 관람 기록을 남길 수 있어요.</p>'}
+      <button class="btn block ${planned ? 'on' : ''}" type="button" data-act="plan-perf" data-id="${esc(p.id)}" aria-pressed="${!!planned}">${planned ? '♥ 보고 싶은 공연에 있습니다' : '♡ 보고 싶어요'}</button>
+      ${canAttend ? `<div class="attend-row"><input type="date" id="attDate" value="${maxDay}" min="${p.startDate}" max="${maxDay}" aria-label="관람 날짜"><button class="btn primary" type="button" data-act="attend-perf" data-id="${esc(p.id)}">✓ 관람했어요</button></div>` : '<p class="op-note">공연이 시작되면 관람 기록을 남길 수 있습니다.</p>'}
       ${attended.length ? `<p class="op-note">관람 기록 ${attended.length}회 · <a href="#/my/attended">${esc(CONFIG.myName)}에서 보기</a></p>` : ''}
     </div></section>`, { back: '#/schedule', keepScroll: S.keepScroll });
   S.keepScroll = false;

@@ -88,6 +88,9 @@ assert.equal(L.computeBadges(recs, arts, 'month', '2026-10').primary, null); // 
 assert.equal(L.isLocalRegion('부산'), true); assert.equal(L.isLocalRegion('서울특별시'), false); assert.equal(L.isLocalRegion('경기'), false); assert.equal(L.isLocalRegion(''), false);
 const trip = n => Array.from({ length: n }, (_, i) => ({ type: 'attended', date: `2026-11-0${i + 1}`, venue: 'V' + i, region: ['부산', '대구', '전남광주', '대전', '강원'][i % 5], artists: ['Z' + i] }));
 assert.equal(L.computeBadges(trip(1), [], 'month', '2026-11').extras.find(x => x.id === 'travel').name, '원정러');
+// '서로 다른 지역 3곳'만으로는 원정러가 아님 (결정 7 → 삭제)
+const metro3 = ['서울', '경기', '인천'].map((region, i) => ({ type: 'attended', date: `2026-11-0${i + 1}`, venue: 'M' + i, region, artists: ['M' + i] }));
+assert.equal(L.computeBadges(metro3, [], 'month', '2026-11').extras.find(x => x.id === 'travel'), undefined);
 assert.equal(L.computeBadges(trip(3), [], 'month', '2026-11').extras.find(x => x.id === 'travel').name, '장거리 원정러');
 assert.equal(L.computeBadges(trip(3), [], 'year', '2026').extras.find(x => x.id === 'travel').name, '원정러'); // 연간은 5회부터 프로
 assert.equal(L.computeBadges(trip(5), [], 'year', '2026').extras.find(x => x.id === 'travel').name, '장거리 원정러');

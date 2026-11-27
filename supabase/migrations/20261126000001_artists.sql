@@ -381,7 +381,7 @@ begin
   insert into public.report_status_logs (report_id, from_status, to_status, actor_id) values (r.id, null, 'submitted', auth.uid());
   return r;
 exception when check_violation then
-  perform public.fail('validation', '공연 날짜, 오픈 일시, 링크 중 하나는 알려 주세요. 링크는 https:// 로 시작해야 해요.');
+  perform public.fail('validation', '공연 날짜, 오픈 일시, 링크 중 하나는 알려 주세요. 링크는 https:// 로 시작해야 합니다.');
 end $$;
 
 create or replace function public.admin_register_report(p_id uuid, p_as text, p_data jsonb) returns jsonb

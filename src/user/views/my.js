@@ -25,23 +25,24 @@ function badgeCard() {
     <div class="badge-head"><p class="eyebrow">TASTE BADGE <a class="guide-link" href="#/badges" data-track="badge_guide_open" data-value="card">가이드 ⓘ</a></p>
       <div class="seg mini" role="group" aria-label="배지 기간"><button type="button" data-act="badge-scope" data-v="month" aria-pressed="${scope === 'month'}">이달</button><button type="button" data-act="badge-scope" data-v="year" aria-pressed="${scope === 'year'}">연말 결산</button></div></div>
     <div class="badge-period"><button type="button" class="icon sm" data-act="badge-move" data-v="-${step}" aria-label="이전">‹</button><b>${scope === 'month' ? `${yy}년 ${mm}월` : `${year} 결산`}</b><button type="button" class="icon sm" data-act="badge-move" data-v="${step}" aria-label="다음"${canNext ? '' : ' disabled'}>›</button></div>
-    <div class="badge-shelf">${slots}</div>${locked ? '<p class="reveal">12월 1일, 올해의 배지 5개가 공개돼요</p>' : ''}
+    <div class="badge-shelf">${slots}</div>${locked ? '<p class="reveal">12월 1일, 올해의 배지 5개가 공개됩니다</p>' : ''}
     <div class="counts"><a href="#/my/planned"><b>${b.counts.planned}</b><span>보고 싶은 공연</span></a><a href="#/my/attended"><b>${b.counts.attended}</b><span>관람 완료</span></a><a href="#/my/artists"><b>${b.counts.artists}</b><span>관심 아티스트</span></a></div></section>`;
 }
 function recordRow(r) {
   const sub = [r.date ? L.fmtDayKo(r.date) : '날짜 미정', r.venue].filter(Boolean).join(' · ');
   const links = r.type === 'planned' ? (r.date && r.date <= today() ? `<button class="link" type="button" data-act="to-attended" data-id="${esc(r.id)}">관람 완료로</button>` : '')
     : `<a class="link" href="#/stamp/${encodeURIComponent(r.id)}">인증샷 만들기</a>`;
-  return `<div class="rec"><div><b>${esc(r.title)}</b><small>${esc(sub)}</small>${r.artists?.length ? `<small>${esc(r.artists.join(' · '))}</small>` : ''}</div>
+  const manual = !r.performanceId && !r.openingId;   // '목록에 없는 공연 직접 기록'으로 만든 기록
+  return `<div class="rec"><div><b>${esc(r.title)}${manual ? '<span class="tag manual">직접 기록</span>' : ''}</b><small>${esc(sub)}</small>${r.artists?.length ? `<small>${esc(r.artists.join(' · '))}</small>` : ''}</div>
     <div class="rec-act">${links}<button class="link" type="button" data-act="edit-rec" data-id="${esc(r.id)}">수정</button><button class="link danger" type="button" data-act="remove-rec" data-id="${esc(r.id)}">삭제</button></div></div>`;
 }
 function renderGuest() {
   track('auth_gate', { value: 'my' });
   const slots = SLOTS.map(([id, label]) => { const c = L.BADGE_CONCEPTS.find(k => k.slot === id); return `<span class="slot ${id === 'primary' ? 'main' : ''}"><span class="slot-ico empty" aria-hidden="true"><i>${c.emoji}</i></span><span class="slot-name">${label}</span></span>`; }).join('');
   page('my', `<section class="intro compact"><p class="eyebrow">${esc(CONFIG.myNameEn)}</p><p class="slogan-sub">${esc(CONFIG.sloganKo)}</p></section>
-    <section class="guest-card"><img src="assets/logo.png" alt="" width="96" height="68"><h2>로그인하고 ${esc(CONFIG.myName)}를 시작해요</h2>
+    <section class="guest-card"><img src="assets/logo.png" alt="" width="96" height="68"><h2>로그인하고 ${esc(CONFIG.myName)}를 시작합니다</h2>
       <ul class="guest-points"><li><span class="emo sm" style="--c:#efe7f5">👀</span><span>보고 싶은 공연 · 관람 완료 · 관심 아티스트를 한곳에</span></li>
-        <li><span class="emo sm" style="--c:#efe7f5">🌈</span><span>기록이 쌓이면 매달 취향 배지가 채워져요</span></li>
+        <li><span class="emo sm" style="--c:#efe7f5">🌈</span><span>기록이 쌓이면 매달 취향 배지가 채워집니다</span></li>
         <li><span class="emo sm" style="--c:#efe7f5">📸</span><span>다녀온 공연은 인증샷으로 스토리에 자랑</span></li></ul>
       <button class="btn primary block" type="button" data-act="login-sheet" data-ctx="my">로그인 · 회원가입</button></section>
     <section class="badge-card guest-preview" aria-hidden="true"><p class="eyebrow">TASTE BADGE</p><div class="badge-shelf">${slots}</div></section>`);
@@ -84,12 +85,12 @@ async function drawMyArtists() {
     searchArtists(MA.q, (list, asked) => {
       if (asked !== MA.q || !$('#myArtistList')) return;
       box.innerHTML = list.length ? `<h2 class="res-head">검색 결과 <span class="count">${list.length}</span></h2><div class="ar-list">${list.map(c => artistCard(c, { from: 'my' })).join('')}</div>${reportArtistCta(MA.q)}`
-        : `<div class="empty ar-empty"><b>‘${esc(MA.q)}’와 맞는 아티스트가 없어요</b><span>띄어쓰기나 영문 이름으로도 찾아보세요.<br>그래도 없으면 제보해 주세요.</span>
+        : `<div class="empty ar-empty"><b>‘${esc(MA.q)}’와 맞는 아티스트가 없습니다</b><span>띄어쓰기나 영문 이름으로도 찾아보세요.<br>그래도 없으면 제보해 주세요.</span>
           <a class="btn primary small" href="#/report/artist" data-act="report-artist" data-name="${esc(MA.q)}">아티스트 제보하기</a></div>`;
     });
     return;
   }
-  if (!S.interests.length) { box.innerHTML = '<div class="empty">관심 아티스트가 없어요. 위에서 아티스트를 찾아 ♡를 눌러 담아 보세요.</div>'; return; }
+  if (!S.interests.length) { box.innerHTML = '<div class="empty">관심 아티스트가 없습니다. 위에서 아티스트를 찾아 ♡를 눌러 담아 보세요.</div>'; return; }
   let cards = []; try { cards = await api.artists.cards(S.interests.filter(i => i.artistId).map(i => i.artistId)); } catch { cards = []; }
   if (!$('#myArtistList') || nameKey(MA.q)) return;
   const byId = new Map(cards.map(c => [c.id, c]));
@@ -106,7 +107,7 @@ export function editSheet(r) {
   sheet(`<h2>기록 수정</h2><form class="form" id="editForm" data-id="${esc(r.id)}">
     <p class="small muted">${esc(r.title)}</p>
     <label>날짜<input type="date" name="date" value="${esc(r.date || '')}"${p ? ` min="${p.startDate}" max="${p.endDate < today() || r.type === 'planned' ? p.endDate : today()}"` : ''}></label>
-    ${kopis ? '<p class="op-note">공연 일정에서 담은 기록은 날짜만 고칠 수 있어요.</p>' : `<label>공연장<input type="text" name="venue" maxlength="40" value="${esc(r.venue || '')}"></label>
+    ${kopis ? '<p class="op-note">공연 일정에서 담은 기록은 날짜만 고칠 수 있습니다.</p>' : `<label>공연장<input type="text" name="venue" maxlength="40" value="${esc(r.venue || '')}"></label>
       <label>지역<select name="region"><option value="">선택 안 함</option>${REGIONS.map(x => `<option${r.region === x ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
       <label>아티스트 (쉼표로 구분)<input type="text" name="artists" maxlength="100" value="${esc((r.artists || []).join(', '))}"></label>`}
     <button class="btn primary block" type="submit">저장</button></form>`);
@@ -129,9 +130,9 @@ export function renderBadgeGuide() {
     <section class="guide-sec"><h2 class="sub">배지 다섯 가지</h2>${cards}</section>
     <section class="guide-sec"><h2 class="sub">대표 배지 4유형</h2><ul class="types">${types}</ul></section>
     <section class="guide-sec"><h2 class="sub">갱신 규칙</h2><ul class="rules">
-      <li><b>매월 1일</b> 새로 시작해요. 그 달 기록만으로 이달의 배지를 모아요. 지난달 배지는 ‹ 버튼으로 다시 볼 수 있어요.</li>
-      <li><b>12월 1일</b> 1월부터의 기록으로 <b>올해의 배지 5개</b>가 공개돼요.</li>
-      <li><b>지방 공연</b>은 서울·경기·인천 이외 지역의 공연이에요.</li></ul></section>`, { back: '#/my' });
+      <li><b>매월 1일</b> 새로 시작합니다. 그 달 기록만으로 이달의 배지를 모읍니다. 지난달 배지는 ‹ 버튼으로 다시 볼 수 있습니다.</li>
+      <li><b>12월 1일</b> 1월부터의 기록으로 <b>올해의 배지 5개</b>가 공개됩니다.</li>
+      <li><b>지방 공연</b>은 서울·경기·인천 이외 지역의 공연입니다.</li></ul></section>`, { back: '#/my' });
 }
 
 /* MY-04 인증샷 (0.5 엔진, R-60~62: 사진은 서버로 보내지 않음) */
@@ -142,7 +143,7 @@ const stampLogo = new Image(); stampLogo.src = 'assets/logo-white.png'; stampLog
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 export function renderStamp(recId) {
   const r = S.records.find(x => x.id === recId && x.type === 'attended');
-  if (!r) { page('my', '<div class="empty">기록을 찾지 못했어요.</div>', { back: '#/my/attended' }); return; }
+  if (!r) { page('my', '<div class="empty">기록을 찾지 못했습니다.</div>', { back: '#/my/attended' }); return; }
   if (!ed.record || ed.record.id !== r.id) Object.assign(ed, { record: r, image: null, zoom: 1, dx: 0, dy: 0, align: 'left', showArtists: true, blob: null });
   const has = !!ed.image;
   track('stamp_open', { item: r.performanceId || 'manual' });
@@ -154,7 +155,7 @@ export function renderStamp(recId) {
       <div class="ctl"><span>문구 위치</span><div class="seg" role="group">${[['left', '왼쪽'], ['center', '가운데'], ['right', '오른쪽']].map(([v, n]) => `<button type="button" data-act="align" data-v="${v}" aria-pressed="${ed.align === v}">${n}</button>`).join('')}</div></div>
       <div class="ctl"><label class="switch"><input type="checkbox" id="artistToggle"${ed.showArtists ? ' checked' : ''}${(r.artists || []).length ? '' : ' disabled'}> 아티스트명 표시</label><button class="link" type="button" data-act="stamp-reset">위치 초기화</button></div></div>
     <div class="actions" id="actions"${has ? '' : ' hidden'}><button class="btn primary block" type="button" data-act="share">인스타그램 스토리에 공유</button><button class="btn ghost block" type="button" data-act="save">이미지로 저장</button>
-      <p class="hint">사진은 서버로 전송되지 않아요. 공유 창에서 Instagram → 스토리를 선택하세요.</p></div>`, { back: '#/my/attended' });
+      <p class="hint">사진은 서버로 전송되지 않습니다. 공유 창에서 Instagram → 스토리를 선택하세요.</p></div>`, { back: '#/my/attended' });
   bindStamp(); draw();
 }
 function wrapLines(ctx, text, maxW, maxLines) {
@@ -171,7 +172,7 @@ export function draw() {
   const x = c.getContext('2d'); const r = ed.record;
   x.save(); x.clearRect(0, 0, W, H); x.fillStyle = '#1b1b1b'; x.fillRect(0, 0, W, H);
   if (ed.image) { const i = ed.image; const s = Math.max(W / i.width, H / i.height) * ed.zoom; const w = i.width * s, h = i.height * s; ed.dx = clamp(ed.dx, -(w - W) / 2, (w - W) / 2); ed.dy = clamp(ed.dy, -(h - H) / 2, (h - H) / 2); x.drawImage(i, (W - w) / 2 + ed.dx, (H - h) / 2 + ed.dy, w, h); }
-  else { x.fillStyle = '#8b8a83'; x.textAlign = 'center'; x.font = `600 46px ${FONT}`; x.fillText('사진을 고르면', W / 2, 860); x.fillText('여기에 인증샷이 만들어져요', W / 2, 930); }
+  else { x.fillStyle = '#8b8a83'; x.textAlign = 'center'; x.font = `600 46px ${FONT}`; x.fillText('사진을 고르면', W / 2, 860); x.fillText('여기에 인증샷이 만들어집니다', W / 2, 930); }
   const g = x.createLinearGradient(0, 1080, 0, H); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.55, 'rgba(0,0,0,.45)'); g.addColorStop(1, 'rgba(0,0,0,.82)'); x.fillStyle = g; x.fillRect(0, 1080, W, H - 1080);
   const maxW = 940; const px = ed.align === 'center' ? W / 2 : ed.align === 'right' ? W - 70 : 70;
   x.textAlign = ed.align; x.fillStyle = '#fff'; x.shadowColor = 'rgba(0,0,0,.35)'; x.shadowBlur = 12;
@@ -203,7 +204,7 @@ async function onPhoto(file) {
     ed.image = await loadImage(file); ed.zoom = 1; ed.dx = 0; ed.dy = 0; $('#zoom').value = 1;
     ['#controls', '#actions', '#dragHint'].forEach(s => { const el = $(s); if (el) el.hidden = false; });
     $('#pickText').textContent = '사진 다시 고르기'; $('#pickLabel').classList.replace('primary', 'ghost'); draw(); track('stamp_ready');
-  } catch { track('photo_error', { value: (file.type || 'unknown').slice(0, 30) }); toast('이 사진 형식은 열 수 없어요. JPG·PNG 사진을 골라 주세요.'); }
+  } catch { track('photo_error', { value: (file.type || 'unknown').slice(0, 30) }); toast('이 사진 형식은 열 수 없습니다. JPG·PNG 사진을 골라 주세요.'); }
 }
 function bindStamp() {
   $('#photo').addEventListener('change', e => { onPhoto(e.target.files[0]); e.target.value = ''; });
@@ -229,19 +230,19 @@ export function stampAction(act, el) {
 async function shareStamp() {
   if (!ed.image) { toast('사진을 먼저 골라 주세요.'); return; }
   track('share_click');
-  let blob = ed.blob; if (!blob) { try { blob = await makeBlob(); } catch { toast('이미지를 만들지 못했어요.'); return; } }
+  let blob = ed.blob; if (!blob) { try { blob = await makeBlob(); } catch { toast('이미지를 만들지 못했습니다.'); return; } }
   const file = new File([blob], stampName(), { type: 'image/jpeg' });
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file] }); track('share_done'); toast('공유했어요!'); }
+    try { await navigator.share({ files: [file] }); track('share_done'); toast('공유했습니다!'); }
     catch (e) { if (e && e.name === 'AbortError') { track('share_cancel'); return; } track('share_error', { value: (e && e.name) || 'unknown' }); saveStamp('fallback'); }
-  } else { track('share_unsupported'); toast('이 브라우저는 바로 공유가 안 돼요. 저장한 뒤 인스타그램에서 올려 주세요.'); saveStamp('fallback'); }
+  } else { track('share_unsupported'); toast('이 브라우저는 바로 공유가 안 됩니다. 저장한 뒤 인스타그램에서 올려 주세요.'); saveStamp('fallback'); }
 }
 async function saveStamp(how) {
   if (!ed.image) { toast('사진을 먼저 골라 주세요.'); return; }
   track('save_click', { value: how });
-  let blob = ed.blob; if (!blob) { try { blob = await makeBlob(); } catch { toast('이미지를 만들지 못했어요.'); return; } }
+  let blob = ed.blob; if (!blob) { try { blob = await makeBlob(); } catch { toast('이미지를 만들지 못했습니다.'); return; } }
   const url = URL.createObjectURL(blob);
   if (!inApp) { const a = document.createElement('a'); a.href = url; a.download = stampName(); document.body.appendChild(a); a.click(); a.remove(); }
-  sheet(`<img src="${url}" alt="완성된 인증샷" class="result-img"><p class="small muted">${inApp ? '이미지를 <b>길게 눌러</b> 사진에 저장해 주세요.' : '저장되지 않았다면 이미지를 <b>길게 눌러</b> 저장할 수 있어요.'}</p>`, () => setTimeout(() => URL.revokeObjectURL(url), 500));
+  sheet(`<img src="${url}" alt="완성된 인증샷" class="result-img"><p class="small muted">${inApp ? '이미지를 <b>길게 눌러</b> 사진에 저장해 주세요.' : '저장되지 않았다면 이미지를 <b>길게 눌러</b> 저장할 수 있습니다.'}</p>`, () => setTimeout(() => URL.revokeObjectURL(url), 500));
 }
 export { closeSheet };
